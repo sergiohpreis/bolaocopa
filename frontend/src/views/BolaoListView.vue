@@ -1,5 +1,6 @@
 <template>
   <div class="page-bg min-h-screen">
+    <WhatsNewModal />
     <div class="max-w-lg mx-auto px-4 py-8">
 
       <!-- Header -->
@@ -57,6 +58,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { listBoloes } from '@/api/bolao'
+import WhatsNewModal from '@/components/WhatsNewModal.vue'
 import type { Bolao } from '@/types'
 
 const router = useRouter()
