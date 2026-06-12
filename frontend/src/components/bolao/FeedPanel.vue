@@ -30,6 +30,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { getFeed } from '@/api/bolao'
+import { traduzTime } from '@/utils/teams'
 import type { FeedEvento } from '@/types'
 
 const props = defineProps<{ bolaoId: string; active?: boolean }>()
@@ -77,7 +78,9 @@ function iconFor(tipo: FeedEvento['tipo']): string {
 
 function descFor(ev: FeedEvento): string {
   const name = ev.user_name ?? 'Alguém'
-  const jogo = ev.jogo_desc ?? 'um jogo'
+  const jogo = ev.jogo_desc
+    ? ev.jogo_desc.split(' x ').map(traduzTime).join(' x ')
+    : 'um jogo'
 
   switch (ev.tipo) {
     case 'palpite_registrado':

@@ -6,7 +6,7 @@
       <!-- Home team -->
       <div class="team home-team">
         <img v-if="jogo.home_team_flag" :src="jogo.home_team_flag" class="flag" :alt="jogo.home_team" />
-        <span class="team-name">{{ jogo.home_team }}</span>
+        <span class="team-name">{{ traduzTime(jogo.home_team) }}</span>
       </div>
 
       <!-- Middle: score or time -->
@@ -26,7 +26,7 @@
 
       <!-- Away team -->
       <div class="team away-team">
-        <span class="team-name">{{ jogo.away_team }}</span>
+        <span class="team-name">{{ traduzTime(jogo.away_team) }}</span>
         <img v-if="jogo.away_team_flag" :src="jogo.away_team_flag" class="flag" :alt="jogo.away_team" />
       </div>
 
@@ -116,6 +116,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { getPalpitesByJogo } from '@/api/bolao'
+import { traduzTime } from '@/utils/teams'
 import type { Jogo, Palpite, PalpiteDeJogo } from '@/types'
 
 const props = defineProps<{ jogo: Jogo; palpite?: Palpite; bolaoId: string }>()
