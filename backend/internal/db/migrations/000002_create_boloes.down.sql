@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS participantes;
+DROP TABLE IF EXISTS boloes;
