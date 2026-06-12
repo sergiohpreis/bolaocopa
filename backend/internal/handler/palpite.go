@@ -93,6 +93,10 @@ func (h *PalpiteHandler) UpsertRetroativo(w http.ResponseWriter, r *http.Request
 			apierror.BadRequest(w, "jogo ainda não começou")
 			return
 		}
+		if errors.Is(err, service.ErrPalpiteJaAprovado) {
+			apierror.BadRequest(w, "palpite já aprovado: não pode ser alterado")
+			return
+		}
 		if errors.Is(err, service.ErrJogoNotFound) {
 			apierror.NotFound(w, "jogo not found")
 			return

@@ -14,7 +14,7 @@ import (
 const atualizarStatusPalpite = `-- name: AtualizarStatusPalpite :one
 UPDATE palpites
 SET status = $3, updated_at = NOW()
-WHERE id = $1 AND bolao_id = $2
+WHERE id = $1 AND bolao_id = $2 AND status = 'pendente'
 RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status
 `
 
@@ -227,7 +227,7 @@ func (q *Queries) ListPalpitesByJogo(ctx context.Context, jogoID pgtype.UUID) ([
 }
 
 const listPalpitesPendentes = `-- name: ListPalpitesPendentes :many
-SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, u.name AS user_name, j.home_team, j.away_team, j.starts_at
+SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, u.name AS user_name, j.home_team, j.away_team, j.starts_at, j.finished, j.home_score AS jogo_home_score, j.away_score AS jogo_away_score
 FROM palpites p
 JOIN users u ON u.id = p.user_id
 JOIN jogos j ON j.id = p.jogo_id
@@ -236,20 +236,23 @@ ORDER BY p.created_at ASC
 `
 
 type ListPalpitesPendentesRow struct {
-	ID        pgtype.UUID        `json:"id"`
-	BolaoID   pgtype.UUID        `json:"bolao_id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	JogoID    pgtype.UUID        `json:"jogo_id"`
-	HomeScore int32              `json:"home_score"`
-	AwayScore int32              `json:"away_score"`
-	Pontos    pgtype.Int4        `json:"pontos"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-	Status    string             `json:"status"`
-	UserName  string             `json:"user_name"`
-	HomeTeam  string             `json:"home_team"`
-	AwayTeam  string             `json:"away_team"`
-	StartsAt  pgtype.Timestamptz `json:"starts_at"`
+	ID            pgtype.UUID        `json:"id"`
+	BolaoID       pgtype.UUID        `json:"bolao_id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	JogoID        pgtype.UUID        `json:"jogo_id"`
+	HomeScore     int32              `json:"home_score"`
+	AwayScore     int32              `json:"away_score"`
+	Pontos        pgtype.Int4        `json:"pontos"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	Status        string             `json:"status"`
+	UserName      string             `json:"user_name"`
+	HomeTeam      string             `json:"home_team"`
+	AwayTeam      string             `json:"away_team"`
+	StartsAt      pgtype.Timestamptz `json:"starts_at"`
+	Finished      bool               `json:"finished"`
+	JogoHomeScore pgtype.Int4        `json:"jogo_home_score"`
+	JogoAwayScore pgtype.Int4        `json:"jogo_away_score"`
 }
 
 func (q *Queries) ListPalpitesPendentes(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesPendentesRow, error) {
@@ -276,6 +279,9 @@ func (q *Queries) ListPalpitesPendentes(ctx context.Context, bolaoID pgtype.UUID
 			&i.HomeTeam,
 			&i.AwayTeam,
 			&i.StartsAt,
+			&i.Finished,
+			&i.JogoHomeScore,
+			&i.JogoAwayScore,
 		); err != nil {
 			return nil, err
 		}
@@ -359,6 +365,7 @@ ON CONFLICT (bolao_id, user_id, jogo_id) DO UPDATE
         away_score = EXCLUDED.away_score,
         status = 'pendente',
         updated_at = NOW()
+WHERE palpites.status != 'aprovado'
 RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status
 `
 

@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	ErrJogoNotFound        = errors.New("jogo not found")
-	ErrPalpiteFechado      = errors.New("palpite fechado: jogo já começou")
-	ErrJogoAindaAberto     = errors.New("jogo ainda não começou: palpite retroativo não permitido")
+	ErrJogoNotFound         = errors.New("jogo not found")
+	ErrPalpiteFechado       = errors.New("palpite fechado: jogo já começou")
+	ErrJogoAindaAberto      = errors.New("jogo ainda não começou: palpite retroativo não permitido")
 	ErrPalpiteNaoEncontrado = errors.New("palpite not found")
+	ErrPalpiteJaAprovado    = errors.New("palpite já aprovado: não pode ser alterado retroativamente")
 )
 
 type PalpiteService struct {
@@ -155,13 +156,20 @@ func (s *PalpiteService) UpsertRetroativo(ctx context.Context, bolaoID, userID, 
 		return repository.Palpite{}, ErrJogoAindaAberto
 	}
 
-	return s.q.UpsertPalpiteRetroativo(ctx, repository.UpsertPalpiteRetroativoParams{
+	p, err := s.q.UpsertPalpiteRetroativo(ctx, repository.UpsertPalpiteRetroativoParams{
 		BolaoID:   bid,
 		UserID:    uid,
 		JogoID:    jid,
 		HomeScore: int32(homeScore),
 		AwayScore: int32(awayScore),
 	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return repository.Palpite{}, ErrPalpiteJaAprovado
+		}
+		return repository.Palpite{}, err
+	}
+	return p, nil
 }
 
 func (s *PalpiteService) ListPendentes(ctx context.Context, bolaoID, adminUserID string) ([]repository.ListPalpitesPendentesRow, error) {

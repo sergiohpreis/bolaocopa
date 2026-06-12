@@ -31,10 +31,11 @@ ON CONFLICT (bolao_id, user_id, jogo_id) DO UPDATE
         away_score = EXCLUDED.away_score,
         status = 'pendente',
         updated_at = NOW()
+WHERE palpites.status != 'aprovado'
 RETURNING *;
 
 -- name: ListPalpitesPendentes :many
-SELECT p.*, u.name AS user_name, j.home_team, j.away_team, j.starts_at
+SELECT p.*, u.name AS user_name, j.home_team, j.away_team, j.starts_at, j.finished, j.home_score AS jogo_home_score, j.away_score AS jogo_away_score
 FROM palpites p
 JOIN users u ON u.id = p.user_id
 JOIN jogos j ON j.id = p.jogo_id
@@ -44,7 +45,7 @@ ORDER BY p.created_at ASC;
 -- name: AtualizarStatusPalpite :one
 UPDATE palpites
 SET status = $3, updated_at = NOW()
-WHERE id = $1 AND bolao_id = $2
+WHERE id = $1 AND bolao_id = $2 AND status = 'pendente'
 RETURNING *;
 
 -- name: GetRanking :many
