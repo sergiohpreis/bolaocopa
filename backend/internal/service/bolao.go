@@ -16,11 +16,16 @@ var (
 )
 
 type BolaoService struct {
-	q repository.Querier
+	q    repository.Querier
+	feed *FeedService
 }
 
 func NewBolaoService(q repository.Querier) *BolaoService {
 	return &BolaoService{q: q}
+}
+
+func (s *BolaoService) SetFeed(feed *FeedService) {
+	s.feed = feed
 }
 
 func (s *BolaoService) Create(ctx context.Context, name, userID string) (repository.Bolo, error) {
@@ -78,6 +83,10 @@ func (s *BolaoService) JoinByToken(ctx context.Context, token, userID string) (r
 	}
 	if _, err = s.q.JoinBolao(ctx, repository.JoinBolaoParams{BolaoID: bolao.ID, UserID: uid}); err != nil {
 		return repository.Bolo{}, fmt.Errorf("joining bolao: %w", err)
+	}
+	if s.feed != nil {
+		bolaoIDStr := uuidToString(bolao.ID)
+		s.feed.InsertEvento(ctx, bolaoIDStr, repository.FeedTipoParticipanteEntrou, &userID, nil, nil)
 	}
 	return bolao, nil
 }

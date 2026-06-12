@@ -30,3 +30,6 @@ Classificação global de todos os Participantes de um Bolão, ordenada pela som
 
 ## Link de Convite
 URL gerada pelo Administrador que permite a qualquer pessoa entrar no Bolão. Após acessar o link e autenticar via Google OAuth, o usuário se torna um Participante.
+
+## Feed
+Registro cronológico dos últimos 50 eventos relevantes de um Bolão, específico por Bolão. Atualizado via polling. Eventos incluem: palpite registrado (sem revelar o placar antes do Jogo começar), novo Participante entrou, Jogo começou (revela os palpites), Resultado apurado (revela pontuação de cada Participante). Não é persistido além dos 50 eventos mais recentes.

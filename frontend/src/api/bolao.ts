@@ -1,5 +1,5 @@
 import http from './http'
-import type { Bolao, Palpite, RankingEntry } from '@/types'
+import type { Bolao, Palpite, RankingEntry, FeedEvento } from '@/types'
 
 export async function createBolao(name: string): Promise<Bolao> {
   const { data } = await http.post<Bolao>('/boloes', { name })
@@ -46,5 +46,10 @@ export async function upsertPalpite(
 
 export async function getRanking(bolaoId: string): Promise<RankingEntry[]> {
   const { data } = await http.get<RankingEntry[]>(`/boloes/${bolaoId}/ranking`)
+  return data
+}
+
+export async function getFeed(bolaoId: string): Promise<FeedEvento[]> {
+  const { data } = await http.get<FeedEvento[]>(`/boloes/${bolaoId}/feed`)
   return data
 }

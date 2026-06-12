@@ -14,6 +14,8 @@ type Querier interface {
 	CreateBolao(ctx context.Context, arg CreateBolaoParams) (Bolo, error)
 	CreateUserByEmail(ctx context.Context, arg CreateUserByEmailParams) (User, error)
 	GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error)
+	InsertFeedEvento(ctx context.Context, arg InsertFeedEventoParams) (FeedEvento, error)
+	ListFeedByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListFeedByBolaoRow, error)
 	GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error)
 	GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
 	GetRanking(ctx context.Context, bolaoID pgtype.UUID) ([]GetRankingRow, error)

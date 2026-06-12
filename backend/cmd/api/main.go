@@ -54,6 +54,10 @@ func main() {
 	jogoSvc := service.NewJogoService(queries, cfg.FootballDataAPIKey)
 	palpiteSvc := service.NewPalpiteService(queries)
 	rankingSvc := service.NewRankingService(queries)
+	feedSvc := service.NewFeedService(queries)
+	bolaoSvc.SetFeed(feedSvc)
+	palpiteSvc.SetFeed(feedSvc)
+	rankingSvc.SetFeed(feedSvc)
 
 	allowedOrigins := splitOrigins(cfg.AllowedOrigins)
 
@@ -73,6 +77,7 @@ func main() {
 		handler.NewJogoHandler(jogoSvc),
 		handler.NewPalpiteHandler(palpiteSvc),
 		handler.NewRankingHandler(rankingSvc, bolaoSvc),
+		handler.NewFeedHandler(feedSvc),
 		authMw,
 	)
 

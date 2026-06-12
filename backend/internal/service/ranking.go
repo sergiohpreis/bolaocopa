@@ -10,11 +10,16 @@ import (
 )
 
 type RankingService struct {
-	q repository.Querier
+	q    repository.Querier
+	feed *FeedService
 }
 
 func NewRankingService(q repository.Querier) *RankingService {
 	return &RankingService{q: q}
+}
+
+func (s *RankingService) SetFeed(feed *FeedService) {
+	s.feed = feed
 }
 
 func (s *RankingService) Get(ctx context.Context, bolaoID string) ([]repository.GetRankingRow, error) {
@@ -57,6 +62,9 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 		return fmt.Errorf("listing palpites: %w", err)
 	}
 
+	seenBoloes := map[string]bool{}
+	jogoIDStr := uuidToString(jogo.ID)
+
 	for _, p := range palpites {
 		pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32)
 		if err := s.q.UpdatePalpitePontos(ctx, repository.UpdatePalpitePontosParams{
@@ -66,6 +74,17 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 			UserID:  p.UserID,
 		}); err != nil {
 			slog.Warn("failed to update pontos", "palpite_id", p.ID, "error", err)
+		}
+		bolaoIDStr := uuidToString(p.BolaoID)
+		seenBoloes[bolaoIDStr] = true
+	}
+
+	if s.feed != nil {
+		for bolaoIDStr := range seenBoloes {
+			s.feed.InsertEvento(ctx, bolaoIDStr, repository.FeedTipoResultadoApurado, nil, &jogoIDStr, map[string]any{
+				"home_score": jogo.HomeScore.Int32,
+				"away_score": jogo.AwayScore.Int32,
+			})
 		}
 	}
 	return nil

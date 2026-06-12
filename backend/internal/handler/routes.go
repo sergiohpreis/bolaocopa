@@ -13,6 +13,7 @@ func RegisterRoutes(
 	jogo *JogoHandler,
 	palpite *PalpiteHandler,
 	ranking *RankingHandler,
+	feed *FeedHandler,
 	authMw func(http.Handler) http.Handler,
 ) {
 	r.Get("/health", healthHandler)
@@ -44,6 +45,7 @@ func RegisterRoutes(
 					r.Get("/palpites", palpite.ListMine)
 					r.Put("/palpites/{jogoId}", palpite.Upsert)
 					r.Get("/ranking", ranking.Get)
+					r.Get("/feed", feed.List)
 				})
 			})
 		})

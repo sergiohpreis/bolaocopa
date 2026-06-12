@@ -16,11 +16,16 @@ var (
 )
 
 type PalpiteService struct {
-	q repository.Querier
+	q    repository.Querier
+	feed *FeedService
 }
 
 func NewPalpiteService(q repository.Querier) *PalpiteService {
 	return &PalpiteService{q: q}
+}
+
+func (s *PalpiteService) SetFeed(feed *FeedService) {
+	s.feed = feed
 }
 
 func (s *PalpiteService) Upsert(ctx context.Context, bolaoID, userID, jogoID string, homeScore, awayScore int) (repository.Palpite, error) {
@@ -57,13 +62,28 @@ func (s *PalpiteService) Upsert(ctx context.Context, bolaoID, userID, jogoID str
 		return repository.Palpite{}, ErrPalpiteFechado
 	}
 
-	return s.q.UpsertPalpite(ctx, repository.UpsertPalpiteParams{
+	p, err := s.q.UpsertPalpite(ctx, repository.UpsertPalpiteParams{
 		BolaoID:   bid,
 		UserID:    uid,
 		JogoID:    jid,
 		HomeScore: int32(homeScore),
 		AwayScore: int32(awayScore),
 	})
+	if err != nil {
+		return p, err
+	}
+	if s.feed != nil {
+		tipo := repository.FeedTipoPalpiteRegistrado
+		if p.UpdatedAt.Time.After(p.CreatedAt.Time) {
+			tipo = repository.FeedTipoPalpiteAlterado
+		}
+		jogoIDStr := jogoID
+		s.feed.InsertEvento(ctx, bolaoID, tipo, &userID, &jogoIDStr, map[string]any{
+			"home_score": homeScore,
+			"away_score": awayScore,
+		})
+	}
+	return p, nil
 }
 
 func (s *PalpiteService) ListByUser(ctx context.Context, bolaoID, userID string) ([]repository.Palpite, error) {

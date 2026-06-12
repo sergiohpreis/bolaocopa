@@ -59,6 +59,9 @@
         </div>
       </div>
 
+      <!-- Feed de atividades -->
+      <FeedPanel :bolao-id="bolaoId" />
+
     </div>
   </div>
 </template>
@@ -70,6 +73,7 @@ import { useToast } from 'primevue/usetoast'
 import { getBolao, listPalpites, upsertPalpite } from '@/api/bolao'
 import { listJogos } from '@/api/jogo'
 import JogoCard from '@/components/bolao/JogoCard.vue'
+import FeedPanel from '@/components/bolao/FeedPanel.vue'
 import type { Bolao, Jogo, Palpite } from '@/types'
 
 const route = useRoute()

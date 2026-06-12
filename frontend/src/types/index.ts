@@ -44,6 +44,18 @@ export interface Palpite {
   pontos?: number
 }
 
+export interface FeedEvento {
+  id: string
+  bolao_id: string
+  tipo: 'palpite_registrado' | 'palpite_alterado' | 'participante_entrou' | 'jogo_iniciado' | 'resultado_apurado'
+  user_id?: string
+  user_name?: string
+  jogo_id?: string
+  jogo_desc?: string
+  payload: Record<string, any>
+  created_at: string
+}
+
 export interface RankingEntry {
   user_id: string
   user_name: string
