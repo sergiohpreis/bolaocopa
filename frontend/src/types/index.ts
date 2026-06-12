@@ -42,6 +42,22 @@ export interface Palpite {
   home_score: number
   away_score: number
   pontos?: number
+  status: 'aprovado' | 'pendente' | 'rejeitado'
+}
+
+export interface PalpitePendente {
+  id: string
+  bolao_id: string
+  user_id: string
+  jogo_id: string
+  home_score: number
+  away_score: number
+  pontos?: number
+  status: string
+  user_name: string
+  home_team: string
+  away_team: string
+  starts_at: string
 }
 
 export interface PalpiteDeJogo {

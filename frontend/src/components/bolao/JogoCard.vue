@@ -60,8 +60,21 @@
         </div>
       </template>
 
-      <!-- Locked palpite display -->
-      <template v-else-if="palpite">
+      <!-- Palpite pendente (aguardando aprovação) -->
+      <template v-else-if="palpite && palpite.status === 'pendente'">
+        <div class="locked-palpite">
+          <span class="locked-label">SEU PALPITE</span>
+          <div class="locked-score">
+            <span class="locked-num">{{ palpite.home_score }}</span>
+            <span class="locked-sep">–</span>
+            <span class="locked-num">{{ palpite.away_score }}</span>
+          </div>
+          <span class="pending-badge font-display">AGUARDANDO</span>
+        </div>
+      </template>
+
+      <!-- Locked palpite display (aprovado) -->
+      <template v-else-if="palpite && palpite.status === 'aprovado'">
         <div class="locked-palpite">
           <span class="locked-label">SEU PALPITE</span>
           <div class="locked-score">
@@ -76,9 +89,24 @@
         </div>
       </template>
 
-      <!-- No palpite, closed -->
+      <!-- Retroativo: jogo fechado, sem palpite aprovado -->
       <template v-else-if="isClosed || jogo.finished">
-        <div class="no-palpite">Palpite não registrado</div>
+        <div class="palpite-input-group">
+          <div class="score-input-wrap">
+            <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
+            <span class="score-display">{{ homeInput }}</span>
+            <button class="score-adj" @click="homeInput = (homeInput ?? 0) + 1">+</button>
+          </div>
+          <span class="score-vs">×</span>
+          <div class="score-input-wrap">
+            <button class="score-adj" @click="awayInput = Math.max(0, (awayInput ?? 0) - 1)">−</button>
+            <span class="score-display">{{ awayInput }}</span>
+            <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
+          </div>
+          <button class="save-btn retro" @click="emit('saveRetroativo', homeInput, awayInput)">
+            <span class="font-display" style="font-size: 0.7rem; letter-spacing: 0.08em;">ENVIAR</span>
+          </button>
+        </div>
       </template>
     </div>
 
@@ -121,7 +149,10 @@ import { traduzTime } from '@/utils/teams'
 import type { Jogo, Palpite, PalpiteDeJogo } from '@/types'
 
 const props = defineProps<{ jogo: Jogo; palpite?: Palpite; bolaoId: string }>()
-const emit = defineEmits<{ (e: 'save', home: number, away: number): void }>()
+const emit = defineEmits<{
+  (e: 'save', home: number, away: number): void
+  (e: 'saveRetroativo', home: number, away: number): void
+}>()
 
 const homeInput = ref<number>(props.palpite?.home_score ?? 0)
 const awayInput = ref<number>(props.palpite?.away_score ?? 0)
@@ -385,7 +416,26 @@ function formatTime(iso: string) {
   background: rgba(57,255,106,0.06);
   box-shadow: none;
 }
+.save-btn.retro {
+  border-color: rgba(255,200,60,0.5);
+  color: rgba(255,200,60,0.85);
+  background: rgba(255,200,60,0.06);
+}
+.save-btn.retro:hover {
+  background: rgba(255,200,60,0.12);
+  box-shadow: 0 0 10px rgba(255,200,60,0.15);
+}
 .save-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.pending-badge {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: rgba(255,200,60,0.85);
+  background: rgba(255,200,60,0.08);
+  border: 1px solid rgba(255,200,60,0.3);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
 
 .locked-palpite {
   display: flex;

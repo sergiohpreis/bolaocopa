@@ -1,5 +1,5 @@
 import http from './http'
-import type { Bolao, Palpite, PalpiteDeJogo, RankingEntry, FeedEvento } from '@/types'
+import type { Bolao, Palpite, PalpitePendente, PalpiteDeJogo, RankingEntry, FeedEvento } from '@/types'
 
 export async function createBolao(name: string): Promise<Bolao> {
   const { data } = await http.post<Bolao>('/boloes', { name })
@@ -41,6 +41,34 @@ export async function upsertPalpite(
     home_score: homeScore,
     away_score: awayScore,
   })
+  return data
+}
+
+export async function upsertPalpiteRetroativo(
+  bolaoId: string,
+  jogoId: string,
+  homeScore: number,
+  awayScore: number,
+): Promise<Palpite> {
+  const { data } = await http.put<Palpite>(`/boloes/${bolaoId}/palpites/${jogoId}/retroativo`, {
+    home_score: homeScore,
+    away_score: awayScore,
+  })
+  return data
+}
+
+export async function listPalpitesPendentes(bolaoId: string): Promise<PalpitePendente[]> {
+  const { data } = await http.get<PalpitePendente[]>(`/boloes/${bolaoId}/palpites/pendentes`)
+  return data
+}
+
+export async function aprovarPalpite(bolaoId: string, palpiteId: string): Promise<Palpite> {
+  const { data } = await http.post<Palpite>(`/boloes/${bolaoId}/palpites/${palpiteId}/aprovar`)
+  return data
+}
+
+export async function rejeitarPalpite(bolaoId: string, palpiteId: string): Promise<Palpite> {
+  const { data } = await http.post<Palpite>(`/boloes/${bolaoId}/palpites/${palpiteId}/rejeitar`)
   return data
 }
 

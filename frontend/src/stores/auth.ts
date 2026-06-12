@@ -10,6 +10,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!accessToken.value)
 
+  const currentUserId = computed<string | null>(() => {
+    if (!accessToken.value) return null
+    try {
+      const payload = JSON.parse(atob(accessToken.value.split('.')[1]))
+      return payload.sub ?? null
+    } catch {
+      return null
+    }
+  })
+
   async function loginWithGoogle(): Promise<void> {
     loading.value = true
     try {
@@ -66,5 +76,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { accessToken, refreshToken, isAuthenticated, loading, loginWithGoogle, registerByEmail, loginByEmail, setTokens, logout, refreshAccessToken }
+  return { accessToken, refreshToken, isAuthenticated, currentUserId, loading, loginWithGoogle, registerByEmail, loginByEmail, setTokens, logout, refreshAccessToken }
 })
