@@ -12,6 +12,25 @@
           <span style="font-size: 1.2rem;">🏆</span>
         </button>
       </div>
+
+      <!-- Tabs -->
+      <div class="tabs-bar">
+        <button
+          class="tab-btn"
+          :class="{ active: tab === 'jogos' }"
+          @click="tab = 'jogos'"
+        >
+          <span>⚽</span> JOGOS
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ active: tab === 'feed' }"
+          @click="tab = 'feed'"
+        >
+          <span class="feed-badge-dot" :class="{ pulse: tab !== 'feed' }" />
+          ATIVIDADE
+        </button>
+      </div>
     </div>
 
     <div class="max-w-lg mx-auto px-4">
@@ -29,38 +48,41 @@
         </div>
       </div>
 
-      <!-- Loading -->
-      <div v-if="loadingJogos" class="flex justify-center py-16">
-        <div class="loader-ring" />
-      </div>
-
-      <!-- Jogos by stage -->
-      <div v-else>
-        <div v-for="(group, stage) in jogosByStage" :key="stage" class="stage-group">
-          <div class="stage-header">
-            <div class="stage-line" />
-            <span class="stage-label">{{ formatStage(String(stage)) }}</span>
-            <div class="stage-line" />
-          </div>
-          <div class="flex flex-col gap-2">
-            <JogoCard
-              v-for="jogo in group"
-              :key="jogo.id"
-              :jogo="jogo"
-              :palpite="palpiteMap[jogo.id]"
-              @save="(h, a) => savePalpite(jogo.id, h, a)"
-            />
-          </div>
+      <!-- Tab: Jogos -->
+      <div v-show="tab === 'jogos'">
+        <div v-if="loadingJogos" class="flex justify-center py-16">
+          <div class="loader-ring" />
         </div>
 
-        <div v-if="Object.keys(jogosByStage).length === 0" class="empty-state">
-          <span style="font-size: 2.5rem;">⚽</span>
-          <p class="font-display" style="color: var(--text-muted); font-size: 1.3rem; letter-spacing: 0.06em; margin-top: 12px;">JOGOS NÃO CARREGADOS</p>
+        <div v-else>
+          <div v-for="(group, stage) in jogosByStage" :key="stage" class="stage-group">
+            <div class="stage-header">
+              <div class="stage-line" />
+              <span class="stage-label">{{ formatStage(String(stage)) }}</span>
+              <div class="stage-line" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <JogoCard
+                v-for="jogo in group"
+                :key="jogo.id"
+                :jogo="jogo"
+                :palpite="palpiteMap[jogo.id]"
+                @save="(h, a) => savePalpite(jogo.id, h, a)"
+              />
+            </div>
+          </div>
+
+          <div v-if="Object.keys(jogosByStage).length === 0" class="empty-state">
+            <span style="font-size: 2.5rem;">⚽</span>
+            <p class="font-display" style="color: var(--text-muted); font-size: 1.3rem; letter-spacing: 0.06em; margin-top: 12px;">JOGOS NÃO CARREGADOS</p>
+          </div>
         </div>
       </div>
 
-      <!-- Feed de atividades -->
-      <FeedPanel :bolao-id="bolaoId" />
+      <!-- Tab: Feed -->
+      <div v-show="tab === 'feed'">
+        <FeedPanel :bolao-id="bolaoId" :active="tab === 'feed'" />
+      </div>
 
     </div>
   </div>
@@ -85,6 +107,7 @@ const jogos = ref<Jogo[]>([])
 const palpites = ref<Palpite[]>([])
 const loadingJogos = ref(true)
 const copied = ref(false)
+const tab = ref<'jogos' | 'feed'>('jogos')
 
 const bolaoId = route.params.id as string
 
@@ -170,7 +193,7 @@ function formatStage(stage: string) {
 .header-inner {
   max-width: 512px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 16px 16px 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -206,6 +229,61 @@ function formatStage(stage: string) {
   flex-shrink: 0;
 }
 .icon-btn:hover { background: rgba(57,255,106,0.12); }
+
+/* Tabs */
+.tabs-bar {
+  max-width: 512px;
+  margin: 0 auto;
+  display: flex;
+  padding: 10px 16px 0;
+  gap: 4px;
+}
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+  position: relative;
+  bottom: -1px;
+}
+.tab-btn.active {
+  color: var(--neon);
+  border-bottom-color: var(--neon);
+}
+.tab-btn:not(.active):hover {
+  color: rgba(255,255,255,0.6);
+}
+
+.feed-badge-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.3s;
+}
+.tab-btn.active .feed-badge-dot {
+  background: var(--neon);
+  box-shadow: 0 0 5px var(--neon);
+}
+.feed-badge-dot.pulse {
+  background: var(--neon);
+  box-shadow: 0 0 5px var(--neon);
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
 
 .invite-card {
   background: rgba(57,255,106,0.04);

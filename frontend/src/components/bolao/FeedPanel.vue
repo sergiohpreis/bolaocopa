@@ -1,10 +1,5 @@
 <template>
   <div class="feed-panel">
-    <div class="feed-header">
-      <div class="feed-dot" :class="{ active: !error }" />
-      <span class="font-display feed-title">ATIVIDADE</span>
-    </div>
-
     <div v-if="loading && eventos.length === 0" class="feed-loading">
       <div class="loader-ring-sm" />
     </div>
@@ -33,11 +28,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { getFeed } from '@/api/bolao'
 import type { FeedEvento } from '@/types'
 
-const props = defineProps<{ bolaoId: string }>()
+const props = defineProps<{ bolaoId: string; active?: boolean }>()
 
 const eventos = ref<FeedEvento[]>([])
 const loading = ref(true)
@@ -54,6 +49,11 @@ async function fetch() {
     loading.value = false
   }
 }
+
+// Fetch immediately when tab becomes active
+watch(() => props.active, (active) => {
+  if (active) fetch()
+})
 
 onMounted(() => {
   fetch()
@@ -119,38 +119,7 @@ function timeAgo(iso: string): string {
   border: 1px solid rgba(57, 255, 106, 0.1);
   border-radius: 12px;
   overflow: hidden;
-  margin-top: 32px;
-}
-
-.feed-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(57, 255, 106, 0.08);
-}
-
-.feed-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  transition: background 0.3s;
-}
-.feed-dot.active {
-  background: var(--neon);
-  box-shadow: 0 0 6px var(--neon);
-  animation: pulse-dot 2s infinite;
-}
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-.feed-title {
-  font-size: 0.78rem;
-  letter-spacing: 0.14em;
-  color: var(--text-muted);
+  margin-top: 16px;
 }
 
 .feed-loading {
