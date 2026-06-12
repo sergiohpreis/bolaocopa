@@ -51,7 +51,6 @@
             <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
           </div>
           <button
-            class="save-btn"
             class="save-btn ready"
             @click="emit('save', homeInput, awayInput)"
           >
