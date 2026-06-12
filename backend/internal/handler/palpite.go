@@ -50,6 +50,28 @@ func (h *PalpiteHandler) Upsert(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, palpite)
 }
 
+// GET /api/v1/boloes/{id}/palpites/{jogoId}
+func (h *PalpiteHandler) ListByJogo(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	bolaoID := chi.URLParam(r, "id")
+	jogoID := chi.URLParam(r, "jogoId")
+
+	palpites, err := h.svc.ListByJogo(r.Context(), bolaoID, userID, jogoID)
+	if err != nil {
+		if errors.Is(err, service.ErrNotParticipante) || errors.Is(err, service.ErrBolaoNotFound) {
+			apierror.Forbidden(w, "you are not a member of this bolao")
+			return
+		}
+		if errors.Is(err, service.ErrJogoNotFound) {
+			apierror.NotFound(w, "jogo not found")
+			return
+		}
+		apierror.Internal(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, palpites)
+}
+
 // GET /api/v1/boloes/{id}/palpites
 func (h *PalpiteHandler) ListMine(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())

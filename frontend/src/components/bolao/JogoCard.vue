@@ -2,7 +2,7 @@
   <div class="jogo-card" :class="{ 'is-finished': jogo.finished, 'is-live': !jogo.finished && isClosed }">
 
     <!-- Teams + score row -->
-    <div class="teams-row">
+    <div class="teams-row" :class="{ clickable: canExpand }" @click="canExpand && toggleExpand()">
       <!-- Home team -->
       <div class="team home-team">
         <img v-if="jogo.home_team_flag" :src="jogo.home_team_flag" class="flag" :alt="jogo.home_team" />
@@ -29,6 +29,9 @@
         <span class="team-name">{{ jogo.away_team }}</span>
         <img v-if="jogo.away_team_flag" :src="jogo.away_team_flag" class="flag" :alt="jogo.away_team" />
       </div>
+
+      <!-- Expand chevron -->
+      <div v-if="canExpand" class="chevron" :class="{ open: expanded }">›</div>
     </div>
 
     <!-- Palpite row -->
@@ -80,14 +83,44 @@
       </template>
     </div>
 
+    <!-- Expanded: palpites dos outros -->
+    <div v-if="canExpand && expanded" class="outros-palpites">
+      <div v-if="loadingOutros" class="outros-loading">
+        <div class="loader-ring-xs" />
+      </div>
+      <div v-else-if="outrosPalpites.length === 0" class="outros-empty">
+        Nenhum palpite registrado ainda.
+      </div>
+      <div v-else class="outros-list">
+        <div
+          v-for="p in outrosPalpites"
+          :key="p.id"
+          class="outro-item"
+          :class="pontosClass(p.pontos)"
+        >
+          <div class="outro-avatar">{{ p.user_name?.[0]?.toUpperCase() ?? '?' }}</div>
+          <span class="outro-name">{{ p.user_name }}</span>
+          <div class="outro-score">
+            <span class="outro-num">{{ p.home_score }}</span>
+            <span class="outro-sep">–</span>
+            <span class="outro-num">{{ p.away_score }}</span>
+          </div>
+          <div v-if="p.pontos !== undefined && p.pontos !== null" class="outro-pontos" :class="pontosClass(p.pontos)">
+            +{{ p.pontos }}
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import type { Jogo, Palpite } from '@/types'
+import { getPalpitesByJogo } from '@/api/bolao'
+import type { Jogo, Palpite, PalpiteDeJogo } from '@/types'
 
-const props = defineProps<{ jogo: Jogo; palpite?: Palpite }>()
+const props = defineProps<{ jogo: Jogo; palpite?: Palpite; bolaoId: string }>()
 const emit = defineEmits<{ (e: 'save', home: number, away: number): void }>()
 
 const homeInput = ref<number | null>(props.palpite?.home_score ?? null)
@@ -116,6 +149,33 @@ onUnmounted(() => {
 })
 
 const isClosed = computed(() => now.value >= new Date(props.jogo.starts_at))
+const canExpand = computed(() => isClosed.value || props.jogo.finished)
+
+// Expansion state
+const expanded = ref(false)
+const loadingOutros = ref(false)
+const outrosPalpites = ref<PalpiteDeJogo[]>([])
+let fetched = false
+
+async function toggleExpand() {
+  expanded.value = !expanded.value
+  if (expanded.value && !fetched) {
+    loadingOutros.value = true
+    try {
+      outrosPalpites.value = await getPalpitesByJogo(props.bolaoId, props.jogo.id)
+      fetched = true
+    } finally {
+      loadingOutros.value = false
+    }
+  }
+}
+
+function pontosClass(pontos?: number | null) {
+  if (pontos === undefined || pontos === null) return ''
+  if (pontos === 10) return 'pts-exact'
+  if (pontos === 3) return 'pts-winner'
+  return 'pts-miss'
+}
 
 function formatTime(iso: string) {
   const d = new Date(iso)
@@ -143,6 +203,26 @@ function formatTime(iso: string) {
   align-items: center;
   padding: 12px 14px 8px;
   gap: 8px;
+}
+.teams-row.clickable {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.teams-row.clickable:hover {
+  background: rgba(57,255,106,0.04);
+}
+
+.chevron {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  transition: transform 0.2s, color 0.2s;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-left: 2px;
+}
+.chevron.open {
+  transform: rotate(90deg);
+  color: var(--neon);
 }
 
 .team {
@@ -341,4 +421,107 @@ function formatTime(iso: string) {
   letter-spacing: 0.04em;
   opacity: 0.7;
 }
+
+/* Outros palpites */
+.outros-palpites {
+  border-top: 1px solid rgba(57,255,106,0.07);
+  background: rgba(0,0,0,0.2);
+}
+
+.outros-loading {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+.loader-ring-xs {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(57,255,106,0.15);
+  border-top-color: var(--neon);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.outros-empty {
+  text-align: center;
+  padding: 14px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.outros-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.outro-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: background 0.15s;
+}
+.outro-item:last-child { border-bottom: none; }
+.outro-item:hover { background: rgba(255,255,255,0.02); }
+
+.outro-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(57,255,106,0.12);
+  border: 1px solid rgba(57,255,106,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.75rem;
+  color: var(--neon);
+  flex-shrink: 0;
+}
+
+.outro-name {
+  flex: 1;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.outro-score {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.outro-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.1rem;
+  color: rgba(255,255,255,0.6);
+  min-width: 14px;
+  text-align: center;
+  line-height: 1;
+}
+.outro-sep {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.outro-pontos {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.85rem;
+  min-width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.pts-exact .outro-num { color: var(--neon); }
+.pts-exact .outro-pontos { color: var(--neon); }
+.pts-winner .outro-num { color: rgba(255,210,80,0.85); }
+.pts-winner .outro-pontos { color: rgba(255,210,80,0.85); }
+.pts-miss .outro-pontos { color: rgba(255,80,80,0.5); }
 </style>

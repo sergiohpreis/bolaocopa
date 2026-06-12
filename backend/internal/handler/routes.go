@@ -43,6 +43,7 @@ func RegisterRoutes(
 					r.Get("/", bolao.Get)
 					r.Post("/regenerate-invite", bolao.RegenerateInvite)
 					r.Get("/palpites", palpite.ListMine)
+					r.Get("/palpites/{jogoId}", palpite.ListByJogo)
 					r.Put("/palpites/{jogoId}", palpite.Upsert)
 					r.Get("/ranking", ranking.Get)
 					r.Get("/feed", feed.List)

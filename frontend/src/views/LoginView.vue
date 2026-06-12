@@ -102,6 +102,11 @@
         </form>
       </div>
     </div>
+    <p class="text-center mt-6" style="font-size: 0.75rem; color: var(--text-muted);">
+      <router-link to="/como-funciona" style="color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+        Como funciona o bolão?
+      </router-link>
+    </p>
   </div>
 </template>
 

@@ -46,6 +46,12 @@ const router = createRouter({
       name: 'ranking',
       component: () => import('@/views/RankingView.vue'),
     },
+    {
+      path: '/como-funciona',
+      name: 'como-funciona',
+      component: () => import('@/views/ComoFuncionaView.vue'),
+      meta: { public: true },
+    },
   ],
 })
 

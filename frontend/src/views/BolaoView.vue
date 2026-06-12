@@ -8,6 +8,9 @@
         <div class="flex-1 min-w-0">
           <h1 class="font-display page-title neon-text">{{ bolao?.name ?? '...' }}</h1>
         </div>
+        <button class="icon-btn" title="Como funciona" @click="router.push('/como-funciona')" style="font-size: 1rem; color: var(--text-muted); font-weight: 600; font-family: 'DM Sans', sans-serif;">
+          ?
+        </button>
         <button class="icon-btn" title="Ranking" @click="router.push(`/boloes/${route.params.id}/ranking`)">
           <span style="font-size: 1.2rem;">🏆</span>
         </button>
@@ -67,6 +70,7 @@
                 :key="jogo.id"
                 :jogo="jogo"
                 :palpite="palpiteMap[jogo.id]"
+                :bolao-id="bolaoId"
                 @save="(h, a) => savePalpite(jogo.id, h, a)"
               />
             </div>

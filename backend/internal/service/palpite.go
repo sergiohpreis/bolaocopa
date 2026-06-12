@@ -86,6 +86,38 @@ func (s *PalpiteService) Upsert(ctx context.Context, bolaoID, userID, jogoID str
 	return p, nil
 }
 
+func (s *PalpiteService) ListByJogo(ctx context.Context, bolaoID, userID, jogoID string) ([]repository.ListPalpitesByBolaoAndJogoRow, error) {
+	bid, err := parseUUID(bolaoID)
+	if err != nil {
+		return nil, ErrBolaoNotFound
+	}
+	uid, err := parseUUID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user id: %w", err)
+	}
+	jid, err := parseUUID(jogoID)
+	if err != nil {
+		return nil, ErrJogoNotFound
+	}
+
+	ok, err := s.q.IsParticipante(ctx, repository.IsParticipanteParams{BolaoID: bid, UserID: uid})
+	if err != nil {
+		return nil, fmt.Errorf("checking membership: %w", err)
+	}
+	if !ok {
+		return nil, ErrNotParticipante
+	}
+
+	items, err := s.q.ListPalpitesByBolaoAndJogo(ctx, repository.ListPalpitesByBolaoAndJogoParams{BolaoID: bid, JogoID: jid})
+	if err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []repository.ListPalpitesByBolaoAndJogoRow{}
+	}
+	return items, nil
+}
+
 func (s *PalpiteService) ListByUser(ctx context.Context, bolaoID, userID string) ([]repository.Palpite, error) {
 	bid, err := parseUUID(bolaoID)
 	if err != nil {

@@ -44,6 +44,18 @@ export interface Palpite {
   pontos?: number
 }
 
+export interface PalpiteDeJogo {
+  id: string
+  bolao_id: string
+  user_id: string
+  jogo_id: string
+  home_score: number
+  away_score: number
+  pontos?: number
+  user_name: string
+  user_avatar?: string
+}
+
 export interface FeedEvento {
   id: string
   bolao_id: string
