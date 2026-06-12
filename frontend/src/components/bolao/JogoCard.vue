@@ -41,20 +41,19 @@
         <div class="palpite-input-group">
           <div class="score-input-wrap">
             <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
-            <span class="score-display">{{ homeInput ?? '–' }}</span>
+            <span class="score-display">{{ homeInput }}</span>
             <button class="score-adj" @click="homeInput = (homeInput ?? 0) + 1">+</button>
           </div>
           <span class="score-vs">×</span>
           <div class="score-input-wrap">
             <button class="score-adj" @click="awayInput = Math.max(0, (awayInput ?? 0) - 1)">−</button>
-            <span class="score-display">{{ awayInput ?? '–' }}</span>
+            <span class="score-display">{{ awayInput }}</span>
             <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
           </div>
           <button
             class="save-btn"
-            :class="{ ready: homeInput !== null && awayInput !== null }"
-            :disabled="homeInput === null || awayInput === null"
-            @click="emit('save', homeInput!, awayInput!)"
+            class="save-btn ready"
+            @click="emit('save', homeInput, awayInput)"
           >
             <span class="font-display" style="font-size: 0.75rem; letter-spacing: 0.1em;">SALVAR</span>
           </button>
@@ -123,14 +122,12 @@ import type { Jogo, Palpite, PalpiteDeJogo } from '@/types'
 const props = defineProps<{ jogo: Jogo; palpite?: Palpite; bolaoId: string }>()
 const emit = defineEmits<{ (e: 'save', home: number, away: number): void }>()
 
-const homeInput = ref<number | null>(props.palpite?.home_score ?? null)
-const awayInput = ref<number | null>(props.palpite?.away_score ?? null)
+const homeInput = ref<number>(props.palpite?.home_score ?? 0)
+const awayInput = ref<number>(props.palpite?.away_score ?? 0)
 
 watch(() => props.palpite, (p) => {
-  if (p) {
-    homeInput.value = p.home_score
-    awayInput.value = p.away_score
-  }
+  homeInput.value = p?.home_score ?? 0
+  awayInput.value = p?.away_score ?? 0
 }, { deep: true })
 
 const now = ref(new Date())
