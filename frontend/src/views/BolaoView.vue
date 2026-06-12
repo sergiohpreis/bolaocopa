@@ -100,6 +100,9 @@
             <div class="pending-info">
               <span class="pending-user">{{ p.user_name }}</span>
               <span class="pending-jogo">{{ traduzTime(p.home_team) }} × {{ traduzTime(p.away_team) }}</span>
+              <span v-if="p.finished && p.jogo_home_score != null" class="pending-resultado">
+                Resultado: {{ p.jogo_home_score }} – {{ p.jogo_away_score }}
+              </span>
             </div>
             <div class="pending-score">
               <span class="font-display" style="font-size: 1.2rem; color: rgba(255,200,60,0.85);">{{ p.home_score }} – {{ p.away_score }}</span>
@@ -212,6 +215,7 @@ async function aprovar(palpiteId: string) {
   try {
     await aprovarPalpite(bolaoId, palpiteId)
     palpitesPendentes.value = palpitesPendentes.value.filter((p) => p.id !== palpiteId)
+    palpites.value = await listPalpites(bolaoId)
     toast.add({ severity: 'success', summary: 'Palpite aprovado!', life: 2000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: 'Erro', detail: e.message, life: 3000 })
@@ -222,6 +226,7 @@ async function rejeitar(palpiteId: string) {
   try {
     await rejeitarPalpite(bolaoId, palpiteId)
     palpitesPendentes.value = palpitesPendentes.value.filter((p) => p.id !== palpiteId)
+    palpites.value = await listPalpites(bolaoId)
     toast.add({ severity: 'success', summary: 'Palpite rejeitado.', life: 2000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: 'Erro', detail: e.message, life: 3000 })
@@ -479,6 +484,12 @@ function formatStage(stage: string) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.pending-resultado {
+  font-size: 0.68rem;
+  color: rgba(57,255,106,0.6);
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.06em;
 }
 .pending-score { flex-shrink: 0; }
 .pending-actions {

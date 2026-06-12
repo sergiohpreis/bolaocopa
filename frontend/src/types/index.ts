@@ -58,6 +58,9 @@ export interface PalpitePendente {
   home_team: string
   away_team: string
   starts_at: string
+  finished: boolean
+  jogo_home_score?: number
+  jogo_away_score?: number
 }
 
 export interface PalpiteDeJogo {

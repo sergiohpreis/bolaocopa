@@ -13,7 +13,10 @@ export const useAuthStore = defineStore('auth', () => {
   const currentUserId = computed<string | null>(() => {
     if (!accessToken.value) return null
     try {
-      const payload = JSON.parse(atob(accessToken.value.split('.')[1]))
+      const base64url = accessToken.value.split('.')[1]
+      const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
+      const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=')
+      const payload = JSON.parse(atob(padded))
       return payload.sub ?? null
     } catch {
       return null

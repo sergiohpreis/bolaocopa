@@ -89,7 +89,28 @@
         </div>
       </template>
 
-      <!-- Retroativo: jogo fechado, sem palpite aprovado -->
+      <!-- Palpite rejeitado -->
+      <template v-else-if="palpite && palpite.status === 'rejeitado'">
+        <div class="palpite-input-group">
+          <div class="score-input-wrap">
+            <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
+            <span class="score-display">{{ homeInput }}</span>
+            <button class="score-adj" @click="homeInput = (homeInput ?? 0) + 1">+</button>
+          </div>
+          <span class="score-vs">×</span>
+          <div class="score-input-wrap">
+            <button class="score-adj" @click="awayInput = Math.max(0, (awayInput ?? 0) - 1)">−</button>
+            <span class="score-display">{{ awayInput }}</span>
+            <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
+          </div>
+          <button class="save-btn retro" @click="emit('saveRetroativo', homeInput, awayInput)">
+            <span class="font-display" style="font-size: 0.7rem; letter-spacing: 0.08em;">REENVIAR</span>
+          </button>
+        </div>
+        <div class="rejected-hint">palpite anterior rejeitado pelo admin</div>
+      </template>
+
+      <!-- Retroativo: jogo fechado, sem palpite -->
       <template v-else-if="isClosed || jogo.finished">
         <div class="palpite-input-group">
           <div class="score-input-wrap">
@@ -426,6 +447,14 @@ function formatTime(iso: string) {
   box-shadow: 0 0 10px rgba(255,200,60,0.15);
 }
 .save-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.rejected-hint {
+  font-size: 0.65rem;
+  color: rgba(255,80,80,0.6);
+  text-align: center;
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+}
 
 .pending-badge {
   font-size: 0.6rem;
