@@ -137,7 +137,7 @@
         <div class="loader-ring-xs" />
       </div>
       <div v-else-if="outrosPalpites.length === 0" class="outros-empty">
-        Nenhum palpite registrado ainda.
+        Nenhum outro participante apostou nesse jogo.
       </div>
       <div v-else class="outros-list">
         <div
@@ -212,15 +212,12 @@ const canExpand = computed(() => isClosed.value || props.jogo.finished)
 const expanded = ref(false)
 const loadingOutros = ref(false)
 const outrosPalpites = ref<PalpiteDeJogo[]>([])
-let fetched = false
-
 async function toggleExpand() {
   expanded.value = !expanded.value
-  if (expanded.value && !fetched) {
+  if (expanded.value) {
     loadingOutros.value = true
     try {
       outrosPalpites.value = await getPalpitesByJogo(props.bolaoId, props.jogo.id)
-      fetched = true
     } finally {
       loadingOutros.value = false
     }

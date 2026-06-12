@@ -264,6 +264,7 @@ func (s *PalpiteService) AprovarOuRejeitar(ctx context.Context, bolaoID, palpite
 			s.feed.InsertEvento(ctx, bolaoID, repository.FeedTipoPalpiteRegistrado, &userIDStr, &jogoIDStr, map[string]any{
 				"home_score": int(p.HomeScore),
 				"away_score": int(p.AwayScore),
+				"retroativo": true,
 			})
 		}
 	}

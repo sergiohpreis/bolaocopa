@@ -85,7 +85,11 @@ function descFor(ev: FeedEvento): string {
   switch (ev.tipo) {
     case 'palpite_registrado':
       if (ev.payload.home_score !== undefined) {
-        return `${name} apostou ${ev.payload.home_score}×${ev.payload.away_score} em ${jogo}`
+        const placar = `${ev.payload.home_score}×${ev.payload.away_score}`
+        if (ev.payload.retroativo) {
+          return `${name} teve palpite retroativo aprovado: ${placar} em ${jogo}`
+        }
+        return `${name} apostou ${placar} em ${jogo}`
       }
       return `${name} registrou palpite em ${jogo}`
     case 'palpite_alterado':

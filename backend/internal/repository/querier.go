@@ -13,10 +13,12 @@ import (
 type Querier interface {
 	AtualizarStatusPalpite(ctx context.Context, arg AtualizarStatusPalpiteParams) (Palpite, error)
 	CreateBolao(ctx context.Context, arg CreateBolaoParams) (Bolo, error)
+	CreateUserByEmail(ctx context.Context, arg CreateUserByEmailParams) (User, error)
 	GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error)
 	GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error)
 	GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
 	GetRanking(ctx context.Context, bolaoID pgtype.UUID) ([]GetRankingRow, error)
+	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	InsertFeedEvento(ctx context.Context, arg InsertFeedEventoParams) (FeedEvento, error)
 	IsParticipante(ctx context.Context, arg IsParticipanteParams) (bool, error)
