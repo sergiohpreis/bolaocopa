@@ -5,8 +5,56 @@
 package repository
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type FeedTipo string
+
+const (
+	FeedTipoPalpiteRegistrado  FeedTipo = "palpite_registrado"
+	FeedTipoPalpiteAlterado    FeedTipo = "palpite_alterado"
+	FeedTipoParticipanteEntrou FeedTipo = "participante_entrou"
+	FeedTipoJogoIniciado       FeedTipo = "jogo_iniciado"
+	FeedTipoResultadoApurado   FeedTipo = "resultado_apurado"
+)
+
+func (e *FeedTipo) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FeedTipo(s)
+	case string:
+		*e = FeedTipo(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FeedTipo: %T", src)
+	}
+	return nil
+}
+
+type NullFeedTipo struct {
+	FeedTipo FeedTipo `json:"feed_tipo"`
+	Valid    bool     `json:"valid"` // Valid is true if FeedTipo is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFeedTipo) Scan(value interface{}) error {
+	if value == nil {
+		ns.FeedTipo, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FeedTipo.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFeedTipo) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FeedTipo), nil
+}
 
 type Bolo struct {
 	ID          pgtype.UUID        `json:"id"`
@@ -15,6 +63,16 @@ type Bolo struct {
 	InviteToken string             `json:"invite_token"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FeedEvento struct {
+	ID        pgtype.UUID        `json:"id"`
+	BolaoID   pgtype.UUID        `json:"bolao_id"`
+	Tipo      FeedTipo           `json:"tipo"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	JogoID    pgtype.UUID        `json:"jogo_id"`
+	Payload   []byte             `json:"payload"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type Jogo struct {
@@ -43,6 +101,7 @@ type Palpite struct {
 	Pontos    pgtype.Int4        `json:"pontos"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	Status    string             `json:"status"`
 }
 
 type Participante struct {
@@ -58,7 +117,7 @@ type User struct {
 	Email        string             `json:"email"`
 	Name         string             `json:"name"`
 	AvatarUrl    pgtype.Text        `json:"avatar_url"`
-	PasswordHash pgtype.Text        `json:"password_hash"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	PasswordHash pgtype.Text        `json:"password_hash"`
 }

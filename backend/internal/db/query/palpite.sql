@@ -14,11 +14,35 @@ SELECT * FROM palpites WHERE bolao_id = $1 AND user_id = $2 ORDER BY created_at 
 SELECT p.*, u.name AS user_name, u.avatar_url AS user_avatar
 FROM palpites p
 JOIN users u ON u.id = p.user_id
-WHERE p.bolao_id = $1 AND p.jogo_id = $2;
+WHERE p.bolao_id = $1 AND p.jogo_id = $2 AND p.status = 'aprovado';
 
 -- name: UpdatePalpitePontos :exec
 UPDATE palpites SET pontos = $1, updated_at = NOW()
 WHERE bolao_id = $2 AND jogo_id = $3 AND user_id = $4;
+
+-- name: UpsertPalpiteRetroativo :one
+INSERT INTO palpites (bolao_id, user_id, jogo_id, home_score, away_score, status)
+VALUES ($1, $2, $3, $4, $5, 'pendente')
+ON CONFLICT (bolao_id, user_id, jogo_id) DO UPDATE
+    SET home_score = EXCLUDED.home_score,
+        away_score = EXCLUDED.away_score,
+        status = 'pendente',
+        updated_at = NOW()
+RETURNING *;
+
+-- name: ListPalpitesPendentes :many
+SELECT p.*, u.name AS user_name, j.home_team, j.away_team, j.starts_at
+FROM palpites p
+JOIN users u ON u.id = p.user_id
+JOIN jogos j ON j.id = p.jogo_id
+WHERE p.bolao_id = $1 AND p.status = 'pendente'
+ORDER BY p.created_at ASC;
+
+-- name: AtualizarStatusPalpite :one
+UPDATE palpites
+SET status = $3, updated_at = NOW()
+WHERE id = $1 AND bolao_id = $2
+RETURNING *;
 
 -- name: GetRanking :many
 SELECT

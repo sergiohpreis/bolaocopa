@@ -12,7 +12,7 @@ import (
 )
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, google_id, email, name, avatar_url, password_hash, created_at, updated_at FROM users WHERE id = $1
+SELECT id, google_id, email, name, avatar_url, created_at, updated_at, password_hash FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -24,9 +24,9 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 		&i.Email,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PasswordHash,
 	)
 	return i, err
 }
@@ -39,7 +39,7 @@ ON CONFLICT (google_id) DO UPDATE
         name       = EXCLUDED.name,
         avatar_url = EXCLUDED.avatar_url,
         updated_at = NOW()
-RETURNING id, google_id, email, name, avatar_url, password_hash, created_at, updated_at
+RETURNING id, google_id, email, name, avatar_url, created_at, updated_at, password_hash
 `
 
 type UpsertUserByGoogleIDParams struct {
@@ -63,57 +63,9 @@ func (q *Queries) UpsertUserByGoogleID(ctx context.Context, arg UpsertUserByGoog
 		&i.Email,
 		&i.Name,
 		&i.AvatarUrl,
-		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const createUserByEmail = `-- name: CreateUserByEmail :one
-INSERT INTO users (email, name, password_hash)
-VALUES ($1, $2, $3)
-RETURNING id, google_id, email, name, avatar_url, password_hash, created_at, updated_at
-`
-
-type CreateUserByEmailParams struct {
-	Email        string `json:"email"`
-	Name         string `json:"name"`
-	PasswordHash string `json:"password_hash"`
-}
-
-func (q *Queries) CreateUserByEmail(ctx context.Context, arg CreateUserByEmailParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUserByEmail, arg.Email, arg.Name, arg.PasswordHash)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.GoogleID,
-		&i.Email,
-		&i.Name,
-		&i.AvatarUrl,
 		&i.PasswordHash,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, google_id, email, name, avatar_url, password_hash, created_at, updated_at FROM users WHERE email = $1
-`
-
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.GoogleID,
-		&i.Email,
-		&i.Name,
-		&i.AvatarUrl,
-		&i.PasswordHash,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
