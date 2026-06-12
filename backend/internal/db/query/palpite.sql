@@ -16,6 +16,9 @@ FROM palpites p
 JOIN users u ON u.id = p.user_id
 WHERE p.bolao_id = $1 AND p.jogo_id = $2 AND p.status = 'aprovado';
 
+-- name: ListPalpitesByJogo :many
+SELECT * FROM palpites WHERE jogo_id = $1 AND status = 'aprovado';
+
 -- name: UpdatePalpitePontos :exec
 UPDATE palpites SET pontos = $1, updated_at = NOW()
 WHERE bolao_id = $2 AND jogo_id = $3 AND user_id = $4;
@@ -53,7 +56,7 @@ SELECT
     COUNT(p.id) FILTER (WHERE p.pontos IS NOT NULL) AS palpites_computados
 FROM participantes pt
 JOIN users u ON u.id = pt.user_id
-LEFT JOIN palpites p ON p.user_id = pt.user_id AND p.bolao_id = pt.bolao_id
+LEFT JOIN palpites p ON p.user_id = pt.user_id AND p.bolao_id = pt.bolao_id AND p.status = 'aprovado'
 WHERE pt.bolao_id = $1
 GROUP BY u.id, u.name, u.avatar_url
 ORDER BY total_pontos DESC, u.name ASC;

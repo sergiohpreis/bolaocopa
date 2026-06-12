@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/sergiohpreis/bolaocopa/backend/internal/repository"
 )
 
@@ -236,13 +237,27 @@ func (s *PalpiteService) AprovarOuRejeitar(ctx context.Context, bolaoID, palpite
 		return repository.Palpite{}, fmt.Errorf("updating palpite status: %w", err)
 	}
 
-	if aprovar && s.feed != nil {
-		userIDStr := p.UserID.String()
-		jogoIDStr := p.JogoID.String()
-		s.feed.InsertEvento(ctx, bolaoID, repository.FeedTipoPalpiteRegistrado, &userIDStr, &jogoIDStr, map[string]any{
-			"home_score": int(p.HomeScore),
-			"away_score": int(p.AwayScore),
-		})
+	if aprovar {
+		// Se o jogo já terminou, calcular e persistir pontos imediatamente
+		jogo, err := s.q.GetJogoByID(ctx, p.JogoID)
+		if err == nil && jogo.Finished && jogo.HomeScore.Valid && jogo.AwayScore.Valid {
+			pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32)
+			_ = s.q.UpdatePalpitePontos(ctx, repository.UpdatePalpitePontosParams{
+				Pontos:  pgtype.Int4{Int32: pontos, Valid: true},
+				BolaoID: p.BolaoID,
+				JogoID:  p.JogoID,
+				UserID:  p.UserID,
+			})
+		}
+
+		if s.feed != nil {
+			userIDStr := p.UserID.String()
+			jogoIDStr := p.JogoID.String()
+			s.feed.InsertEvento(ctx, bolaoID, repository.FeedTipoPalpiteRegistrado, &userIDStr, &jogoIDStr, map[string]any{
+				"home_score": int(p.HomeScore),
+				"away_score": int(p.AwayScore),
+			})
+		}
 	}
 
 	return p, nil

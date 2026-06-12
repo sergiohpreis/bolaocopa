@@ -51,7 +51,7 @@ SELECT
     COUNT(p.id) FILTER (WHERE p.pontos IS NOT NULL) AS palpites_computados
 FROM participantes pt
 JOIN users u ON u.id = pt.user_id
-LEFT JOIN palpites p ON p.user_id = pt.user_id AND p.bolao_id = pt.bolao_id
+LEFT JOIN palpites p ON p.user_id = pt.user_id AND p.bolao_id = pt.bolao_id AND p.status = 'aprovado'
 WHERE pt.bolao_id = $1
 GROUP BY u.id, u.name, u.avatar_url
 ORDER BY total_pontos DESC, u.name ASC
@@ -162,6 +162,41 @@ type ListPalpitesByBolaoAndUserParams struct {
 
 func (q *Queries) ListPalpitesByBolaoAndUser(ctx context.Context, arg ListPalpitesByBolaoAndUserParams) ([]Palpite, error) {
 	rows, err := q.db.Query(ctx, listPalpitesByBolaoAndUser, arg.BolaoID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Palpite
+	for rows.Next() {
+		var i Palpite
+		if err := rows.Scan(
+			&i.ID,
+			&i.BolaoID,
+			&i.UserID,
+			&i.JogoID,
+			&i.HomeScore,
+			&i.AwayScore,
+			&i.Pontos,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPalpitesByJogo = `-- name: ListPalpitesByJogo :many
+SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status FROM palpites WHERE jogo_id = $1 AND status = 'aprovado'
+`
+
+func (q *Queries) ListPalpitesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]Palpite, error) {
+	rows, err := q.db.Query(ctx, listPalpitesByJogo, jogoID)
 	if err != nil {
 		return nil, err
 	}

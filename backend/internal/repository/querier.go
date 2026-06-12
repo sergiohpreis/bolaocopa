@@ -27,6 +27,7 @@ type Querier interface {
 	ListJogos(ctx context.Context) ([]Jogo, error)
 	ListPalpitesByBolaoAndJogo(ctx context.Context, arg ListPalpitesByBolaoAndJogoParams) ([]ListPalpitesByBolaoAndJogoRow, error)
 	ListPalpitesByBolaoAndUser(ctx context.Context, arg ListPalpitesByBolaoAndUserParams) ([]Palpite, error)
+	ListPalpitesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]Palpite, error)
 	ListPalpitesPendentes(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesPendentesRow, error)
 	ListParticipantesByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListParticipantesByBolaoRow, error)
 	RegenerateInviteToken(ctx context.Context, arg RegenerateInviteTokenParams) (Bolo, error)
