@@ -1,0 +1,80 @@
+services:
+  bolaocopa-postgres:
+    image: postgres:16-alpine
+    container_name: bolaocopa-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - bolaocopa-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bolaocopa-internal
+
+  bolaocopa-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bolaocopa-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@bolaocopa-postgres:5432/${POSTGRES_DB}?sslmode=disable
+      PORT: "8080"
+      RUN_MIGRATIONS: "true"
+      JWT_SECRET: ${JWT_SECRET}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL}
+      FOOTBALL_DATA_API_KEY: ${FOOTBALL_DATA_API_KEY}
+    depends_on:
+      bolaocopa-postgres:
+        condition: service_healthy
+    networks:
+      - bolaocopa-internal
+
+  bolaocopa-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bolaocopa-frontend
+    restart: unless-stopped
+    networks:
+      - bolaocopa-internal
+
+  bolaocopa-proxy:
+    image: nginx:alpine
+    container_name: bolaocopa-proxy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - bolaocopa-backend
+      - bolaocopa-frontend
+    networks:
+      - bolaocopa-internal
+
+  bolaocopa-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: bolaocopa-tunnel
+    restart: unless-stopped
+    profiles: ["production"]
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    network_mode: host
+    depends_on:
+      - bolaocopa-proxy
+
+volumes:
+  bolaocopa-postgres-data:
+
+networks:
+  bolaocopa-internal:
+    driver: bridge
