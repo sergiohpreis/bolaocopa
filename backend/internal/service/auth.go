@@ -161,7 +161,7 @@ func (s *AuthService) RegisterByEmail(ctx context.Context, email, name, password
 	user, err := s.q.CreateUserByEmail(ctx, repository.CreateUserByEmailParams{
 		Email:        email,
 		Name:         name,
-		PasswordHash: string(hash),
+		PasswordHash: pgtype.Text{String: string(hash), Valid: true},
 	})
 	if err != nil {
 		var pgErr *pgconn.PgError
