@@ -11,6 +11,78 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const atualizarStatusPalpite = `-- name: AtualizarStatusPalpite :one
+UPDATE palpites
+SET status = $3, updated_at = NOW()
+WHERE id = $1 AND bolao_id = $2 AND status = 'pendente'
+RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status
+`
+
+type AtualizarStatusPalpiteParams struct {
+	ID      pgtype.UUID `json:"id"`
+	BolaoID pgtype.UUID `json:"bolao_id"`
+	Status  string      `json:"status"`
+}
+
+func (q *Queries) AtualizarStatusPalpite(ctx context.Context, arg AtualizarStatusPalpiteParams) (Palpite, error) {
+	row := q.db.QueryRow(ctx, atualizarStatusPalpite, arg.ID, arg.BolaoID, arg.Status)
+	var i Palpite
+	err := row.Scan(
+		&i.ID,
+		&i.BolaoID,
+		&i.UserID,
+		&i.JogoID,
+		&i.HomeScore,
+		&i.AwayScore,
+		&i.Pontos,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Status,
+	)
+	return i, err
+}
+
+const deletePalpite = `-- name: DeletePalpite :exec
+DELETE FROM palpites WHERE id = $1 AND bolao_id = $2
+`
+
+type DeletePalpiteParams struct {
+	ID      pgtype.UUID `json:"id"`
+	BolaoID pgtype.UUID `json:"bolao_id"`
+}
+
+func (q *Queries) DeletePalpite(ctx context.Context, arg DeletePalpiteParams) error {
+	_, err := q.db.Exec(ctx, deletePalpite, arg.ID, arg.BolaoID)
+	return err
+}
+
+const getPalpiteByID = `-- name: GetPalpiteByID :one
+SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status FROM palpites WHERE id = $1 AND bolao_id = $2
+`
+
+type GetPalpiteByIDParams struct {
+	ID      pgtype.UUID `json:"id"`
+	BolaoID pgtype.UUID `json:"bolao_id"`
+}
+
+func (q *Queries) GetPalpiteByID(ctx context.Context, arg GetPalpiteByIDParams) (Palpite, error) {
+	row := q.db.QueryRow(ctx, getPalpiteByID, arg.ID, arg.BolaoID)
+	var i Palpite
+	err := row.Scan(
+		&i.ID,
+		&i.BolaoID,
+		&i.UserID,
+		&i.JogoID,
+		&i.HomeScore,
+		&i.AwayScore,
+		&i.Pontos,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Status,
+	)
+	return i, err
+}
+
 const getRanking = `-- name: GetRanking :many
 SELECT
     u.id AS user_id,
@@ -20,7 +92,7 @@ SELECT
     COUNT(p.id) FILTER (WHERE p.pontos IS NOT NULL) AS palpites_computados
 FROM participantes pt
 JOIN users u ON u.id = pt.user_id
-LEFT JOIN palpites p ON p.user_id = pt.user_id AND p.bolao_id = pt.bolao_id
+LEFT JOIN palpites p ON p.user_id = pt.user_id AND p.bolao_id = pt.bolao_id AND p.status = 'aprovado'
 WHERE pt.bolao_id = $1
 GROUP BY u.id, u.name, u.avatar_url
 ORDER BY total_pontos DESC, u.name ASC
@@ -61,10 +133,10 @@ func (q *Queries) GetRanking(ctx context.Context, bolaoID pgtype.UUID) ([]GetRan
 }
 
 const listPalpitesByBolaoAndJogo = `-- name: ListPalpitesByBolaoAndJogo :many
-SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, u.name AS user_name, u.avatar_url AS user_avatar
+SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, u.name AS user_name, u.avatar_url AS user_avatar
 FROM palpites p
 JOIN users u ON u.id = p.user_id
-WHERE p.bolao_id = $1 AND p.jogo_id = $2
+WHERE p.bolao_id = $1 AND p.jogo_id = $2 AND p.status = 'aprovado'
 `
 
 type ListPalpitesByBolaoAndJogoParams struct {
@@ -82,6 +154,7 @@ type ListPalpitesByBolaoAndJogoRow struct {
 	Pontos     pgtype.Int4        `json:"pontos"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	Status     string             `json:"status"`
 	UserName   string             `json:"user_name"`
 	UserAvatar pgtype.Text        `json:"user_avatar"`
 }
@@ -105,6 +178,7 @@ func (q *Queries) ListPalpitesByBolaoAndJogo(ctx context.Context, arg ListPalpit
 			&i.Pontos,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Status,
 			&i.UserName,
 			&i.UserAvatar,
 		); err != nil {
@@ -119,7 +193,7 @@ func (q *Queries) ListPalpitesByBolaoAndJogo(ctx context.Context, arg ListPalpit
 }
 
 const listPalpitesByBolaoAndUser = `-- name: ListPalpitesByBolaoAndUser :many
-SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at FROM palpites WHERE bolao_id = $1 AND user_id = $2 ORDER BY created_at ASC
+SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status FROM palpites WHERE bolao_id = $1 AND user_id = $2 ORDER BY created_at ASC
 `
 
 type ListPalpitesByBolaoAndUserParams struct {
@@ -146,6 +220,176 @@ func (q *Queries) ListPalpitesByBolaoAndUser(ctx context.Context, arg ListPalpit
 			&i.Pontos,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPalpitesByJogo = `-- name: ListPalpitesByJogo :many
+SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status FROM palpites WHERE jogo_id = $1 AND status = 'aprovado'
+`
+
+func (q *Queries) ListPalpitesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]Palpite, error) {
+	rows, err := q.db.Query(ctx, listPalpitesByJogo, jogoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Palpite
+	for rows.Next() {
+		var i Palpite
+		if err := rows.Scan(
+			&i.ID,
+			&i.BolaoID,
+			&i.UserID,
+			&i.JogoID,
+			&i.HomeScore,
+			&i.AwayScore,
+			&i.Pontos,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPalpitesPendentes = `-- name: ListPalpitesPendentes :many
+SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, u.name AS user_name, j.home_team, j.away_team, j.starts_at, j.finished, j.home_score AS jogo_home_score, j.away_score AS jogo_away_score
+FROM palpites p
+JOIN users u ON u.id = p.user_id
+JOIN jogos j ON j.id = p.jogo_id
+WHERE p.bolao_id = $1 AND p.status = 'pendente'
+ORDER BY p.created_at ASC
+`
+
+type ListPalpitesPendentesRow struct {
+	ID            pgtype.UUID        `json:"id"`
+	BolaoID       pgtype.UUID        `json:"bolao_id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	JogoID        pgtype.UUID        `json:"jogo_id"`
+	HomeScore     int32              `json:"home_score"`
+	AwayScore     int32              `json:"away_score"`
+	Pontos        pgtype.Int4        `json:"pontos"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	Status        string             `json:"status"`
+	UserName      string             `json:"user_name"`
+	HomeTeam      string             `json:"home_team"`
+	AwayTeam      string             `json:"away_team"`
+	StartsAt      pgtype.Timestamptz `json:"starts_at"`
+	Finished      bool               `json:"finished"`
+	JogoHomeScore pgtype.Int4        `json:"jogo_home_score"`
+	JogoAwayScore pgtype.Int4        `json:"jogo_away_score"`
+}
+
+func (q *Queries) ListPalpitesPendentes(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesPendentesRow, error) {
+	rows, err := q.db.Query(ctx, listPalpitesPendentes, bolaoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPalpitesPendentesRow
+	for rows.Next() {
+		var i ListPalpitesPendentesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.BolaoID,
+			&i.UserID,
+			&i.JogoID,
+			&i.HomeScore,
+			&i.AwayScore,
+			&i.Pontos,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Status,
+			&i.UserName,
+			&i.HomeTeam,
+			&i.AwayTeam,
+			&i.StartsAt,
+			&i.Finished,
+			&i.JogoHomeScore,
+			&i.JogoAwayScore,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPalpitesRetroativosAprovados = `-- name: ListPalpitesRetroativosAprovados :many
+SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, u.name AS user_name, j.home_team, j.away_team, j.starts_at, j.finished, j.home_score AS jogo_home_score, j.away_score AS jogo_away_score
+FROM palpites p
+JOIN users u ON u.id = p.user_id
+JOIN jogos j ON j.id = p.jogo_id
+WHERE p.bolao_id = $1 AND p.status = 'aprovado' AND j.starts_at <= NOW()
+ORDER BY p.updated_at DESC
+`
+
+type ListPalpitesRetroativosAprovadosRow struct {
+	ID            pgtype.UUID        `json:"id"`
+	BolaoID       pgtype.UUID        `json:"bolao_id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	JogoID        pgtype.UUID        `json:"jogo_id"`
+	HomeScore     int32              `json:"home_score"`
+	AwayScore     int32              `json:"away_score"`
+	Pontos        pgtype.Int4        `json:"pontos"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	Status        string             `json:"status"`
+	UserName      string             `json:"user_name"`
+	HomeTeam      string             `json:"home_team"`
+	AwayTeam      string             `json:"away_team"`
+	StartsAt      pgtype.Timestamptz `json:"starts_at"`
+	Finished      bool               `json:"finished"`
+	JogoHomeScore pgtype.Int4        `json:"jogo_home_score"`
+	JogoAwayScore pgtype.Int4        `json:"jogo_away_score"`
+}
+
+func (q *Queries) ListPalpitesRetroativosAprovados(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesRetroativosAprovadosRow, error) {
+	rows, err := q.db.Query(ctx, listPalpitesRetroativosAprovados, bolaoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPalpitesRetroativosAprovadosRow
+	for rows.Next() {
+		var i ListPalpitesRetroativosAprovadosRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.BolaoID,
+			&i.UserID,
+			&i.JogoID,
+			&i.HomeScore,
+			&i.AwayScore,
+			&i.Pontos,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Status,
+			&i.UserName,
+			&i.HomeTeam,
+			&i.AwayTeam,
+			&i.StartsAt,
+			&i.Finished,
+			&i.JogoHomeScore,
+			&i.JogoAwayScore,
 		); err != nil {
 			return nil, err
 		}
@@ -186,7 +430,7 @@ ON CONFLICT (bolao_id, user_id, jogo_id) DO UPDATE
     SET home_score = EXCLUDED.home_score,
         away_score = EXCLUDED.away_score,
         updated_at = NOW()
-RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at
+RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status
 `
 
 type UpsertPalpiteParams struct {
@@ -216,40 +460,54 @@ func (q *Queries) UpsertPalpite(ctx context.Context, arg UpsertPalpiteParams) (P
 		&i.Pontos,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
 	)
 	return i, err
 }
 
-const listPalpitesByJogo = `-- name: ListPalpitesByJogo :many
-SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at FROM palpites WHERE jogo_id = $1
+const upsertPalpiteRetroativo = `-- name: UpsertPalpiteRetroativo :one
+INSERT INTO palpites (bolao_id, user_id, jogo_id, home_score, away_score, status)
+VALUES ($1, $2, $3, $4, $5, 'pendente')
+ON CONFLICT (bolao_id, user_id, jogo_id) DO UPDATE
+    SET home_score = EXCLUDED.home_score,
+        away_score = EXCLUDED.away_score,
+        status = 'pendente',
+        updated_at = NOW()
+WHERE palpites.status != 'aprovado'
+RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status
 `
 
-func (q *Queries) ListPalpitesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]Palpite, error) {
-	rows, err := q.db.Query(ctx, listPalpitesByJogo, jogoID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Palpite
-	for rows.Next() {
-		var i Palpite
-		if err := rows.Scan(
-			&i.ID,
-			&i.BolaoID,
-			&i.UserID,
-			&i.JogoID,
-			&i.HomeScore,
-			&i.AwayScore,
-			&i.Pontos,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type UpsertPalpiteRetroativoParams struct {
+	BolaoID   pgtype.UUID `json:"bolao_id"`
+	UserID    pgtype.UUID `json:"user_id"`
+	JogoID    pgtype.UUID `json:"jogo_id"`
+	HomeScore int32       `json:"home_score"`
+	AwayScore int32       `json:"away_score"`
+}
+
+// When the conflict row has status='aprovado', the WHERE clause causes Postgres to skip
+// the DO UPDATE, and RETURNING emits 0 rows. pgx surfaces this as pgx.ErrNoRows,
+// which the service maps to ErrPalpiteJaAprovado.
+func (q *Queries) UpsertPalpiteRetroativo(ctx context.Context, arg UpsertPalpiteRetroativoParams) (Palpite, error) {
+	row := q.db.QueryRow(ctx, upsertPalpiteRetroativo,
+		arg.BolaoID,
+		arg.UserID,
+		arg.JogoID,
+		arg.HomeScore,
+		arg.AwayScore,
+	)
+	var i Palpite
+	err := row.Scan(
+		&i.ID,
+		&i.BolaoID,
+		&i.UserID,
+		&i.JogoID,
+		&i.HomeScore,
+		&i.AwayScore,
+		&i.Pontos,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Status,
+	)
+	return i, err
 }

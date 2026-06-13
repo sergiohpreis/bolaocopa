@@ -4,31 +4,51 @@
       <div v-if="show" class="overlay" @click.self="dismiss">
         <div class="modal">
           <div class="modal-header">
-            <span class="version-badge font-display">v1.0.0</span>
+            <span class="version-badge font-display">v1.1.0</span>
             <button class="close-btn" @click="dismiss">×</button>
           </div>
-          <h2 class="modal-title font-display">DECOLONIAL</h2>
+          <h2 class="modal-title font-display">RETROATIVO</h2>
           <p class="modal-subtitle">O que há de novo</p>
+
+          <p class="section-label font-display">PARA TODOS</p>
           <ul class="changes">
             <li class="change-item">
-              <span class="change-icon">🌍</span>
+              <span class="change-icon">⏮</span>
               <div>
-                <div class="change-title">Nomes dos times em português</div>
-                <div class="change-desc">Alemanha, Espanha, Coreia do Sul — sem mais "Germany", "Spain" ou "South Korea".</div>
+                <div class="change-title">Palpites em jogos passados</div>
+                <div class="change-desc">Entrou no bolão depois? Registre seus palpites mesmo em jogos que já começaram.</div>
               </div>
             </li>
             <li class="change-item">
-              <span class="change-icon">👀</span>
+              <span class="change-icon">✅</span>
               <div>
-                <div class="change-title">Palpites dos outros visíveis</div>
-                <div class="change-desc">Clique em qualquer jogo que já começou para ver o que todo mundo apostou.</div>
+                <div class="change-title">Aprovação pelo admin</div>
+                <div class="change-desc">O admin revisa e aprova cada palpite retroativo — garantia contra trapaça.</div>
               </div>
             </li>
             <li class="change-item">
-              <span class="change-icon">📋</span>
+              <span class="change-icon">🏆</span>
               <div>
-                <div class="change-title">Página "Como funciona"</div>
-                <div class="change-desc">Regras de pontuação e tudo mais explicado. Botão ? no cabeçalho.</div>
+                <div class="change-title">Entra no ranking normalmente</div>
+                <div class="change-desc">Palpite aprovado pontua igual a qualquer outro: 10 pelo placar exato, 3 pelo vencedor.</div>
+              </div>
+            </li>
+          </ul>
+
+          <p class="section-label font-display">PARA O ADMIN</p>
+          <ul class="changes">
+            <li class="change-item">
+              <span class="change-icon">⚙</span>
+              <div>
+                <div class="change-title">Nova aba ADMIN</div>
+                <div class="change-desc">Gerencie palpites pendentes e configurações do bolão sem misturar com os jogos.</div>
+              </div>
+            </li>
+            <li class="change-item">
+              <span class="change-icon">🔒</span>
+              <div>
+                <div class="change-title">Retroativo vem desabilitado</div>
+                <div class="change-desc">Vá na aba ADMIN e ative "Palpites Retroativos" para liberar para o seu grupo.</div>
               </div>
             </li>
           </ul>
@@ -42,7 +62,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const STORAGE_KEY = 'whats_new_seen_v1.0.0'
+const STORAGE_KEY = 'whats_new_seen_v1.1.0'
 const show = ref(!localStorage.getItem(STORAGE_KEY))
 
 function dismiss() {
@@ -117,10 +137,18 @@ function dismiss() {
   letter-spacing: 0.04em;
 }
 
+.section-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-bottom: 10px;
+}
+
 .changes {
   list-style: none;
   padding: 0;
-  margin: 0 0 24px;
+  margin: 0 0 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;

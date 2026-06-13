@@ -1,5 +1,5 @@
 <template>
-  <div class="login-bg min-h-screen flex items-center justify-center px-4 py-12">
+  <div class="login-bg min-h-screen flex flex-col items-center justify-center px-4 py-12">
     <div class="pitch-lines" aria-hidden="true" />
 
     <div class="w-full max-w-sm animate-fade-up">

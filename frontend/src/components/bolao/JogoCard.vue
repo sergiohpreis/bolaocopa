@@ -60,8 +60,21 @@
         </div>
       </template>
 
-      <!-- Locked palpite display -->
-      <template v-else-if="palpite">
+      <!-- Palpite pendente (aguardando aprovação) -->
+      <template v-else-if="palpite && palpite.status === 'pendente'">
+        <div class="locked-palpite">
+          <span class="locked-label">SEU PALPITE</span>
+          <div class="locked-score">
+            <span class="locked-num">{{ palpite.home_score }}</span>
+            <span class="locked-sep">–</span>
+            <span class="locked-num">{{ palpite.away_score }}</span>
+          </div>
+          <span class="pending-badge font-display">AGUARDANDO</span>
+        </div>
+      </template>
+
+      <!-- Locked palpite display (aprovado) -->
+      <template v-else-if="palpite && palpite.status === 'aprovado'">
         <div class="locked-palpite">
           <span class="locked-label">SEU PALPITE</span>
           <div class="locked-score">
@@ -76,9 +89,50 @@
         </div>
       </template>
 
-      <!-- No palpite, closed -->
-      <template v-else-if="isClosed || jogo.finished">
+      <!-- Palpite rejeitado -->
+      <template v-else-if="palpite && palpite.status === 'rejeitado'">
+        <div class="palpite-input-group">
+          <div class="score-input-wrap">
+            <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
+            <span class="score-display">{{ homeInput }}</span>
+            <button class="score-adj" @click="homeInput = (homeInput ?? 0) + 1">+</button>
+          </div>
+          <span class="score-vs">×</span>
+          <div class="score-input-wrap">
+            <button class="score-adj" @click="awayInput = Math.max(0, (awayInput ?? 0) - 1)">−</button>
+            <span class="score-display">{{ awayInput }}</span>
+            <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
+          </div>
+          <button class="save-btn retro" @click="emit('saveRetroativo', homeInput, awayInput)">
+            <span class="font-display" style="font-size: 0.7rem; letter-spacing: 0.08em;">REENVIAR</span>
+          </button>
+        </div>
+        <div class="rejected-hint">palpite anterior rejeitado pelo admin</div>
+      </template>
+
+      <!-- Sem palpite, retroativo desabilitado -->
+      <template v-else-if="(isClosed || jogo.finished) && !retroativoEnabled">
         <div class="no-palpite">Palpite não registrado</div>
+      </template>
+
+      <!-- Retroativo: jogo fechado, sem palpite, e retroativo habilitado -->
+      <template v-else-if="(isClosed || jogo.finished) && retroativoEnabled">
+        <div class="palpite-input-group">
+          <div class="score-input-wrap">
+            <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
+            <span class="score-display">{{ homeInput }}</span>
+            <button class="score-adj" @click="homeInput = (homeInput ?? 0) + 1">+</button>
+          </div>
+          <span class="score-vs">×</span>
+          <div class="score-input-wrap">
+            <button class="score-adj" @click="awayInput = Math.max(0, (awayInput ?? 0) - 1)">−</button>
+            <span class="score-display">{{ awayInput }}</span>
+            <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
+          </div>
+          <button class="save-btn retro" @click="emit('saveRetroativo', homeInput, awayInput)">
+            <span class="font-display" style="font-size: 0.7rem; letter-spacing: 0.08em;">ENVIAR</span>
+          </button>
+        </div>
       </template>
     </div>
 
@@ -88,7 +142,7 @@
         <div class="loader-ring-xs" />
       </div>
       <div v-else-if="outrosPalpites.length === 0" class="outros-empty">
-        Nenhum palpite registrado ainda.
+        Nenhum outro participante apostou nesse jogo.
       </div>
       <div v-else class="outros-list">
         <div
@@ -120,8 +174,11 @@ import { getPalpitesByJogo } from '@/api/bolao'
 import { traduzTime } from '@/utils/teams'
 import type { Jogo, Palpite, PalpiteDeJogo } from '@/types'
 
-const props = defineProps<{ jogo: Jogo; palpite?: Palpite; bolaoId: string }>()
-const emit = defineEmits<{ (e: 'save', home: number, away: number): void }>()
+const props = defineProps<{ jogo: Jogo; palpite?: Palpite; bolaoId: string; retroativoEnabled?: boolean }>()
+const emit = defineEmits<{
+  (e: 'save', home: number, away: number): void
+  (e: 'saveRetroativo', home: number, away: number): void
+}>()
 
 const homeInput = ref<number>(props.palpite?.home_score ?? 0)
 const awayInput = ref<number>(props.palpite?.away_score ?? 0)
@@ -160,15 +217,12 @@ const canExpand = computed(() => isClosed.value || props.jogo.finished)
 const expanded = ref(false)
 const loadingOutros = ref(false)
 const outrosPalpites = ref<PalpiteDeJogo[]>([])
-let fetched = false
-
 async function toggleExpand() {
   expanded.value = !expanded.value
-  if (expanded.value && !fetched) {
+  if (expanded.value) {
     loadingOutros.value = true
     try {
       outrosPalpites.value = await getPalpitesByJogo(props.bolaoId, props.jogo.id)
-      fetched = true
     } finally {
       loadingOutros.value = false
     }
@@ -385,7 +439,34 @@ function formatTime(iso: string) {
   background: rgba(57,255,106,0.06);
   box-shadow: none;
 }
+.save-btn.retro {
+  border-color: rgba(255,200,60,0.5);
+  color: rgba(255,200,60,0.85);
+  background: rgba(255,200,60,0.06);
+}
+.save-btn.retro:hover {
+  background: rgba(255,200,60,0.12);
+  box-shadow: 0 0 10px rgba(255,200,60,0.15);
+}
 .save-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.rejected-hint {
+  font-size: 0.65rem;
+  color: rgba(255,80,80,0.6);
+  text-align: center;
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+}
+
+.pending-badge {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: rgba(255,200,60,0.85);
+  background: rgba(255,200,60,0.08);
+  border: 1px solid rgba(255,200,60,0.3);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
 
 .locked-palpite {
   display: flex;

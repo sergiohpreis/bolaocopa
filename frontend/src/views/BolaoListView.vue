@@ -8,10 +8,16 @@
           <h1 class="font-display neon-text" style="font-size: 3rem; line-height: 1;">MEUS BOLÕES</h1>
           <p class="text-xs mt-0.5" style="color: var(--text-muted); letter-spacing: 0.08em;">COPA DO MUNDO</p>
         </div>
-        <button class="new-btn" @click="router.push('/boloes/novo')">
-          <span style="font-size: 1.1rem;">+</span>
-          <span class="font-display" style="letter-spacing: 0.08em; font-size: 0.9rem;">NOVO</span>
-        </button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="new-btn" @click="router.push('/boloes/novo')">
+            <span style="font-size: 1.1rem;">+</span>
+            <span class="font-display" style="letter-spacing: 0.08em; font-size: 0.9rem;">NOVO</span>
+          </button>
+          <button class="logout-btn" @click="handleLogout" :title="`Sair (${auth.currentUserName})`">
+            <span class="logout-name">{{ auth.currentUserName }}</span>
+            <span style="font-size: 0.9rem; opacity: 0.6;">⏻</span>
+          </button>
+        </div>
       </div>
 
       <!-- Divider -->
@@ -57,11 +63,18 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { listBoloes } from '@/api/bolao'
+import { useAuthStore } from '@/stores/auth'
 import type { Bolao } from '@/types'
 
 const router = useRouter()
+const auth = useAuthStore()
 const boloes = ref<Bolao[]>([])
 const loading = ref(true)
+
+function handleLogout() {
+  auth.logout()
+  router.push({ name: 'login' })
+}
 
 onMounted(async () => {
   try {
@@ -108,6 +121,32 @@ function formatDate(iso: string) {
 .new-btn:hover {
   box-shadow: 0 0 20px rgba(57,255,106,0.4);
   transform: translateY(-1px);
+}
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  margin-bottom: 4px;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+.logout-btn:hover {
+  border-color: rgba(255,80,80,0.4);
+  color: rgba(255,80,80,0.7);
+}
+.logout-name {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .loader-ring {

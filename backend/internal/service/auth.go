@@ -78,7 +78,7 @@ func (s *AuthService) ExchangeGoogleCode(ctx context.Context, code string) (Toke
 		return TokenResponse{}, fmt.Errorf("upserting user: %w", err)
 	}
 
-	return s.generateTokenPair(uuidToString(user.ID))
+	return s.generateTokenPair(uuidToString(user.ID), user.Name)
 }
 
 func (s *AuthService) ValidateAccessToken(tokenString string) (string, error) {
@@ -95,6 +95,17 @@ func (s *AuthService) ValidateAccessToken(tokenString string) (string, error) {
 		return "", ErrInvalidToken
 	}
 	return sub, nil
+}
+
+func (s *AuthService) ValidateUserExists(ctx context.Context, userID string) error {
+	uid, err := parseUUID(userID)
+	if err != nil {
+		return ErrInvalidToken
+	}
+	if _, err := s.q.GetUserByID(ctx, uid); err != nil {
+		return ErrInvalidToken
+	}
+	return nil
 }
 
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (TokenResponse, error) {
@@ -114,20 +125,21 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (To
 	if err != nil {
 		return TokenResponse{}, ErrInvalidToken
 	}
-	if _, err := s.q.GetUserByID(ctx, uid); err != nil {
+	user, err := s.q.GetUserByID(ctx, uid)
+	if err != nil {
 		return TokenResponse{}, ErrInvalidToken
 	}
-	return s.generateTokenPair(sub)
+	return s.generateTokenPair(sub, user.Name)
 }
 
-func (s *AuthService) generateTokenPair(userID string) (TokenResponse, error) {
+func (s *AuthService) generateTokenPair(userID, name string) (TokenResponse, error) {
 	accessExp := time.Now().Add(15 * time.Minute)
-	accessToken, err := s.signToken(userID, "access", accessExp)
+	accessToken, err := s.signToken(userID, name, "access", accessExp)
 	if err != nil {
 		return TokenResponse{}, fmt.Errorf("signing access token: %w", err)
 	}
 	refreshExp := time.Now().Add(7 * 24 * time.Hour)
-	refreshToken, err := s.signToken(userID, "refresh", refreshExp)
+	refreshToken, err := s.signToken(userID, name, "refresh", refreshExp)
 	if err != nil {
 		return TokenResponse{}, fmt.Errorf("signing refresh token: %w", err)
 	}
@@ -138,12 +150,13 @@ func (s *AuthService) generateTokenPair(userID string) (TokenResponse, error) {
 	}, nil
 }
 
-func (s *AuthService) signToken(userID, typ string, exp time.Time) (string, error) {
+func (s *AuthService) signToken(userID, name, typ string, exp time.Time) (string, error) {
 	claims := jwt.MapClaims{
-		"sub": userID,
-		"typ": typ,
-		"exp": exp.Unix(),
-		"iat": time.Now().Unix(),
+		"sub":  userID,
+		"name": name,
+		"typ":  typ,
+		"exp":  exp.Unix(),
+		"iat":  time.Now().Unix(),
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.jwtSecret)
 }
@@ -161,7 +174,7 @@ func (s *AuthService) RegisterByEmail(ctx context.Context, email, name, password
 	user, err := s.q.CreateUserByEmail(ctx, repository.CreateUserByEmailParams{
 		Email:        email,
 		Name:         name,
-		PasswordHash: string(hash),
+		PasswordHash: pgtype.Text{String: string(hash), Valid: true},
 	})
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -171,7 +184,7 @@ func (s *AuthService) RegisterByEmail(ctx context.Context, email, name, password
 		return TokenResponse{}, fmt.Errorf("creating user: %w", err)
 	}
 
-	return s.generateTokenPair(uuidToString(user.ID))
+	return s.generateTokenPair(uuidToString(user.ID), user.Name)
 }
 
 func (s *AuthService) LoginByEmail(ctx context.Context, email, password string) (TokenResponse, error) {
@@ -190,7 +203,7 @@ func (s *AuthService) LoginByEmail(ctx context.Context, email, password string) 
 		return TokenResponse{}, ErrInvalidCredentials
 	}
 
-	return s.generateTokenPair(uuidToString(user.ID))
+	return s.generateTokenPair(uuidToString(user.ID), user.Name)
 }
 
 func (s *AuthService) parseToken(tokenString string) (jwt.MapClaims, error) {

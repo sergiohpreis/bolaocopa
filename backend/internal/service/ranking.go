@@ -62,10 +62,15 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 		return fmt.Errorf("listing palpites: %w", err)
 	}
 
-	seenBoloes := map[string]bool{}
+	// boloesComPalpiteNovo rastreia bolões que tinham palpites sem pontos —
+	// só esses recebem o evento de feed (evita duplicar resultado_apurado a cada run do job).
+	boloesComPalpiteNovo := map[string]bool{}
 	jogoIDStr := uuidToString(jogo.ID)
 
 	for _, p := range palpites {
+		if p.Pontos.Valid {
+			continue
+		}
 		pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32)
 		if err := s.q.UpdatePalpitePontos(ctx, repository.UpdatePalpitePontosParams{
 			Pontos:  pgtype.Int4{Int32: pontos, Valid: true},
@@ -76,11 +81,11 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 			slog.Warn("failed to update pontos", "palpite_id", p.ID, "error", err)
 		}
 		bolaoIDStr := uuidToString(p.BolaoID)
-		seenBoloes[bolaoIDStr] = true
+		boloesComPalpiteNovo[bolaoIDStr] = true
 	}
 
 	if s.feed != nil {
-		for bolaoIDStr := range seenBoloes {
+		for bolaoIDStr := range boloesComPalpiteNovo {
 			s.feed.InsertEvento(ctx, bolaoIDStr, repository.FeedTipoResultadoApurado, nil, &jogoIDStr, map[string]any{
 				"home_score": jogo.HomeScore.Int32,
 				"away_score": jogo.AwayScore.Int32,

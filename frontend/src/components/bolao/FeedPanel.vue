@@ -16,7 +16,7 @@
           class="feed-item"
           :class="`feed-item--${ev.tipo}`"
         >
-          <div class="feed-icon">{{ iconFor(ev.tipo) }}</div>
+          <div class="feed-icon">{{ iconFor(ev) }}</div>
           <div class="feed-content">
             <div class="feed-text">{{ descFor(ev) }}</div>
             <div class="feed-time">{{ timeAgo(ev.created_at) }}</div>
@@ -65,15 +65,17 @@ onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
 
-function iconFor(tipo: FeedEvento['tipo']): string {
+function iconFor(ev: FeedEvento): string {
+  if (ev.tipo === 'palpite_registrado' && ev.payload.retroativo) return '⏮'
   const icons: Record<FeedEvento['tipo'], string> = {
     palpite_registrado: '🎯',
     palpite_alterado: '✏️',
     participante_entrou: '👤',
     jogo_iniciado: '⚽',
     resultado_apurado: '📊',
+    palpite_removido: '🚫',
   }
-  return icons[tipo] ?? '•'
+  return icons[ev.tipo] ?? '•'
 }
 
 function descFor(ev: FeedEvento): string {
@@ -85,7 +87,11 @@ function descFor(ev: FeedEvento): string {
   switch (ev.tipo) {
     case 'palpite_registrado':
       if (ev.payload.home_score !== undefined) {
-        return `${name} apostou ${ev.payload.home_score}×${ev.payload.away_score} em ${jogo}`
+        const placar = `${ev.payload.home_score}×${ev.payload.away_score}`
+        if (ev.payload.retroativo) {
+          return `${name} teve palpite retroativo aprovado: ${placar} em ${jogo}`
+        }
+        return `${name} apostou ${placar} em ${jogo}`
       }
       return `${name} registrou palpite em ${jogo}`
     case 'palpite_alterado':
@@ -102,6 +108,11 @@ function descFor(ev: FeedEvento): string {
         return `Resultado de ${jogo}: ${ev.payload.home_score}×${ev.payload.away_score}`
       }
       return `Resultado apurado em ${jogo}`
+    case 'palpite_removido':
+      if (ev.payload.home_score !== undefined) {
+        return `Admin removeu o palpite retroativo de ${name}: ${ev.payload.home_score}×${ev.payload.away_score} em ${jogo}`
+      }
+      return `Admin removeu palpite retroativo de ${name} em ${jogo}`
     default:
       return ''
   }

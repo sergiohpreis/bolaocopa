@@ -97,3 +97,28 @@ func (h *BolaoHandler) RegenerateInvite(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, http.StatusOK, bolao)
 }
+
+// PATCH /api/v1/boloes/{id}/settings
+func (h *BolaoHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	bolaoID := chi.URLParam(r, "id")
+
+	var body struct {
+		RetroativoEnabled *bool `json:"retroativo_enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.RetroativoEnabled == nil {
+		apierror.BadRequest(w, "retroativo_enabled is required")
+		return
+	}
+
+	bolao, err := h.svc.SetRetroativoEnabled(r.Context(), bolaoID, userID, *body.RetroativoEnabled)
+	if err != nil {
+		if errors.Is(err, service.ErrNotAdmin) {
+			apierror.Forbidden(w, "only the admin can change settings")
+			return
+		}
+		apierror.Internal(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, bolao)
+}

@@ -16,6 +16,7 @@ export interface Bolao {
   name: string
   admin_id: string
   invite_token: string
+  retroativo_enabled: boolean
   created_at: string
   updated_at: string
 }
@@ -42,6 +43,25 @@ export interface Palpite {
   home_score: number
   away_score: number
   pontos?: number
+  status: 'aprovado' | 'pendente' | 'rejeitado'
+}
+
+export interface PalpitePendente {
+  id: string
+  bolao_id: string
+  user_id: string
+  jogo_id: string
+  home_score: number
+  away_score: number
+  pontos?: number
+  status: string
+  user_name: string
+  home_team: string
+  away_team: string
+  starts_at: string
+  finished: boolean
+  jogo_home_score?: number
+  jogo_away_score?: number
 }
 
 export interface PalpiteDeJogo {
@@ -59,7 +79,7 @@ export interface PalpiteDeJogo {
 export interface FeedEvento {
   id: string
   bolao_id: string
-  tipo: 'palpite_registrado' | 'palpite_alterado' | 'participante_entrou' | 'jogo_iniciado' | 'resultado_apurado'
+  tipo: 'palpite_registrado' | 'palpite_alterado' | 'participante_entrou' | 'jogo_iniciado' | 'resultado_apurado' | 'palpite_removido'
   user_id?: string
   user_name?: string
   jogo_id?: string

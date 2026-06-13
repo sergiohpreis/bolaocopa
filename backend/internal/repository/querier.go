@@ -11,29 +11,39 @@ import (
 )
 
 type Querier interface {
+	AtualizarStatusPalpite(ctx context.Context, arg AtualizarStatusPalpiteParams) (Palpite, error)
 	CreateBolao(ctx context.Context, arg CreateBolaoParams) (Bolo, error)
 	CreateUserByEmail(ctx context.Context, arg CreateUserByEmailParams) (User, error)
+	DeletePalpite(ctx context.Context, arg DeletePalpiteParams) error
 	GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error)
-	InsertFeedEvento(ctx context.Context, arg InsertFeedEventoParams) (FeedEvento, error)
-	ListFeedByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListFeedByBolaoRow, error)
 	GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error)
 	GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
+	GetPalpiteByID(ctx context.Context, arg GetPalpiteByIDParams) (Palpite, error)
 	GetRanking(ctx context.Context, bolaoID pgtype.UUID) ([]GetRankingRow, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
+	InsertFeedEvento(ctx context.Context, arg InsertFeedEventoParams) (FeedEvento, error)
 	IsParticipante(ctx context.Context, arg IsParticipanteParams) (bool, error)
 	JoinBolao(ctx context.Context, arg JoinBolaoParams) (Participante, error)
 	ListBoloesByUser(ctx context.Context, userID pgtype.UUID) ([]Bolo, error)
+	ListFeedByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListFeedByBolaoRow, error)
 	ListFinishedJobsWithoutScores(ctx context.Context) ([]Jogo, error)
 	ListJogos(ctx context.Context) ([]Jogo, error)
 	ListPalpitesByBolaoAndJogo(ctx context.Context, arg ListPalpitesByBolaoAndJogoParams) ([]ListPalpitesByBolaoAndJogoRow, error)
 	ListPalpitesByBolaoAndUser(ctx context.Context, arg ListPalpitesByBolaoAndUserParams) ([]Palpite, error)
 	ListPalpitesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]Palpite, error)
+	ListPalpitesPendentes(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesPendentesRow, error)
+	ListPalpitesRetroativosAprovados(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesRetroativosAprovadosRow, error)
 	ListParticipantesByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListParticipantesByBolaoRow, error)
 	RegenerateInviteToken(ctx context.Context, arg RegenerateInviteTokenParams) (Bolo, error)
+	SetRetroativoEnabled(ctx context.Context, arg SetRetroativoEnabledParams) (Bolo, error)
 	UpdatePalpitePontos(ctx context.Context, arg UpdatePalpitePontosParams) error
 	UpsertJogo(ctx context.Context, arg UpsertJogoParams) (Jogo, error)
 	UpsertPalpite(ctx context.Context, arg UpsertPalpiteParams) (Palpite, error)
+	// When the conflict row has status='aprovado', the WHERE clause causes Postgres to skip
+	// the DO UPDATE, and RETURNING emits 0 rows. pgx surfaces this as pgx.ErrNoRows,
+	// which the service maps to ErrPalpiteJaAprovado.
+	UpsertPalpiteRetroativo(ctx context.Context, arg UpsertPalpiteRetroativoParams) (Palpite, error)
 	UpsertUserByGoogleID(ctx context.Context, arg UpsertUserByGoogleIDParams) (User, error)
 }
 

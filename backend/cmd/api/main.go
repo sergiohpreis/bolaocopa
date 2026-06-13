@@ -52,7 +52,7 @@ func main() {
 	authSvc := service.NewAuthService(queries, cfg.JWTSecret, cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL)
 	bolaoSvc := service.NewBolaoService(queries)
 	jogoSvc := service.NewJogoService(queries, cfg.FootballDataAPIKey)
-	palpiteSvc := service.NewPalpiteService(queries)
+	palpiteSvc := service.NewPalpiteService(queries, pool)
 	rankingSvc := service.NewRankingService(queries)
 	feedSvc := service.NewFeedService(queries)
 	bolaoSvc.SetFeed(feedSvc)
@@ -93,8 +93,18 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Background scoring ticker: compute scores every 5 minutes after sync
+	// Background sync: roda imediatamente ao iniciar e depois a cada 5 minutos.
 	go func() {
+		doSync := func() {
+			syncCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+			if err := jogoSvc.SyncFromAPI(syncCtx); err != nil {
+				slog.Warn("background sync failed", "error", err)
+			} else if err := rankingSvc.ComputeScoresForFinishedJogos(syncCtx); err != nil {
+				slog.Warn("background scoring failed", "error", err)
+			}
+		}
+		doSync()
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
 		for {
@@ -102,13 +112,7 @@ func main() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				syncCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-				if err := jogoSvc.SyncFromAPI(syncCtx); err != nil {
-					slog.Warn("background sync failed", "error", err)
-				} else if err := rankingSvc.ComputeScoresForFinishedJogos(syncCtx); err != nil {
-					slog.Warn("background scoring failed", "error", err)
-				}
-				cancel()
+				doSync()
 			}
 		}
 	}()
