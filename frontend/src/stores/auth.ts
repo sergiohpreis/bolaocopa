@@ -10,17 +10,25 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!accessToken.value)
 
-  const currentUserId = computed<string | null>(() => {
-    if (!accessToken.value) return null
+  function decodeJwt(token: string): Record<string, any> | null {
     try {
-      const base64url = accessToken.value.split('.')[1]
+      const base64url = token.split('.')[1]
       const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
       const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=')
-      const payload = JSON.parse(atob(padded))
-      return payload.sub ?? null
+      return JSON.parse(atob(padded))
     } catch {
       return null
     }
+  }
+
+  const currentUserId = computed<string | null>(() => {
+    if (!accessToken.value) return null
+    return decodeJwt(accessToken.value)?.sub ?? null
+  })
+
+  const currentUserName = computed<string | null>(() => {
+    if (!accessToken.value) return null
+    return decodeJwt(accessToken.value)?.name ?? null
   })
 
   async function loginWithGoogle(): Promise<void> {
@@ -79,5 +87,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { accessToken, refreshToken, isAuthenticated, currentUserId, loading, loginWithGoogle, registerByEmail, loginByEmail, setTokens, logout, refreshAccessToken }
+  return { accessToken, refreshToken, isAuthenticated, currentUserId, currentUserName, loading, loginWithGoogle, registerByEmail, loginByEmail, setTokens, logout, refreshAccessToken }
 })

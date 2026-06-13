@@ -13,8 +13,9 @@
             <span style="font-size: 1.1rem;">+</span>
             <span class="font-display" style="letter-spacing: 0.08em; font-size: 0.9rem;">NOVO</span>
           </button>
-          <button class="logout-btn" @click="handleLogout" title="Sair">
-            <span style="font-size: 1rem;">⏻</span>
+          <button class="logout-btn" @click="handleLogout" :title="`Sair (${auth.currentUserName})`">
+            <span class="logout-name">{{ auth.currentUserName }}</span>
+            <span style="font-size: 0.9rem; opacity: 0.6;">⏻</span>
           </button>
         </div>
       </div>
@@ -124,8 +125,8 @@ function formatDate(iso: string) {
 .logout-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
+  gap: 6px;
+  padding: 0 12px;
   height: 36px;
   background: transparent;
   border: 1px solid rgba(255,255,255,0.12);
@@ -134,10 +135,18 @@ function formatDate(iso: string) {
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s;
   margin-bottom: 4px;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
 }
 .logout-btn:hover {
   border-color: rgba(255,80,80,0.4);
   color: rgba(255,80,80,0.7);
+}
+.logout-name {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .loader-ring {
