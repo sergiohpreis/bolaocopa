@@ -1,1 +1,1 @@
-ALTER TABLE boloes ADD COLUMN retroativo_enabled BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE boloes ADD COLUMN retroativo_enabled BOOLEAN NOT NULL DEFAULT false;
