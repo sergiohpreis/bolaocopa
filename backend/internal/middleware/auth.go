@@ -27,6 +27,10 @@ func Auth(authSvc *service.AuthService) func(http.Handler) http.Handler {
 				apierror.Unauthorized(w, "invalid or expired token")
 				return
 			}
+			if err := authSvc.ValidateUserExists(r.Context(), userID); err != nil {
+				apierror.Unauthorized(w, "user not found")
+				return
+			}
 			ctx := context.WithValue(r.Context(), userIDKey, userID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

@@ -97,6 +97,17 @@ func (s *AuthService) ValidateAccessToken(tokenString string) (string, error) {
 	return sub, nil
 }
 
+func (s *AuthService) ValidateUserExists(ctx context.Context, userID string) error {
+	uid, err := parseUUID(userID)
+	if err != nil {
+		return ErrInvalidToken
+	}
+	if _, err := s.q.GetUserByID(ctx, uid); err != nil {
+		return ErrInvalidToken
+	}
+	return nil
+}
+
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (TokenResponse, error) {
 	claims, err := s.parseToken(refreshToken)
 	if err != nil {
