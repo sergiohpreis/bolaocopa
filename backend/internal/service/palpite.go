@@ -373,5 +373,26 @@ func (s *PalpiteService) Desaprovar(ctx context.Context, bolaoID, palpiteID, adm
 		return ErrNotAdmin
 	}
 
-	return s.q.DeletePalpite(ctx, repository.DeletePalpiteParams{ID: pid, BolaoID: bid})
+	palpite, err := s.q.GetPalpiteByID(ctx, repository.GetPalpiteByIDParams{ID: pid, BolaoID: bid})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrPalpiteNaoEncontrado
+		}
+		return fmt.Errorf("getting palpite: %w", err)
+	}
+
+	if err := s.q.DeletePalpite(ctx, repository.DeletePalpiteParams{ID: pid, BolaoID: bid}); err != nil {
+		return err
+	}
+
+	if s.feed != nil {
+		userIDStr := uuidToString(palpite.UserID)
+		jogoIDStr := uuidToString(palpite.JogoID)
+		s.feed.InsertEvento(ctx, bolaoID, repository.FeedTipoPalpiteRemovido, &userIDStr, &jogoIDStr, map[string]any{
+			"home_score": palpite.HomeScore,
+			"away_score": palpite.AwayScore,
+		})
+	}
+
+	return nil
 }

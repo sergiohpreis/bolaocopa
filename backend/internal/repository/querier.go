@@ -18,6 +18,7 @@ type Querier interface {
 	GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error)
 	GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error)
 	GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
+	GetPalpiteByID(ctx context.Context, arg GetPalpiteByIDParams) (Palpite, error)
 	GetRanking(ctx context.Context, bolaoID pgtype.UUID) ([]GetRankingRow, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
@@ -39,6 +40,9 @@ type Querier interface {
 	UpdatePalpitePontos(ctx context.Context, arg UpdatePalpitePontosParams) error
 	UpsertJogo(ctx context.Context, arg UpsertJogoParams) (Jogo, error)
 	UpsertPalpite(ctx context.Context, arg UpsertPalpiteParams) (Palpite, error)
+	// When the conflict row has status='aprovado', the WHERE clause causes Postgres to skip
+	// the DO UPDATE, and RETURNING emits 0 rows. pgx surfaces this as pgx.ErrNoRows,
+	// which the service maps to ErrPalpiteJaAprovado.
 	UpsertPalpiteRetroativo(ctx context.Context, arg UpsertPalpiteRetroativoParams) (Palpite, error)
 	UpsertUserByGoogleID(ctx context.Context, arg UpsertUserByGoogleIDParams) (User, error)
 }

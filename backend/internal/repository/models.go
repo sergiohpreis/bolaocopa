@@ -19,6 +19,7 @@ const (
 	FeedTipoParticipanteEntrou FeedTipo = "participante_entrou"
 	FeedTipoJogoIniciado       FeedTipo = "jogo_iniciado"
 	FeedTipoResultadoApurado   FeedTipo = "resultado_apurado"
+	FeedTipoPalpiteRemovido    FeedTipo = "palpite_removido"
 )
 
 func (e *FeedTipo) Scan(src interface{}) error {

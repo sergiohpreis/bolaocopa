@@ -1,0 +1,2 @@
+-- NOTE: Postgres does not support removing enum values.
+-- To roll back, recreate the type without 'palpite_removido' and update dependent columns.

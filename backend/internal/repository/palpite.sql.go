@@ -56,6 +56,33 @@ func (q *Queries) DeletePalpite(ctx context.Context, arg DeletePalpiteParams) er
 	return err
 }
 
+const getPalpiteByID = `-- name: GetPalpiteByID :one
+SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status FROM palpites WHERE id = $1 AND bolao_id = $2
+`
+
+type GetPalpiteByIDParams struct {
+	ID      pgtype.UUID `json:"id"`
+	BolaoID pgtype.UUID `json:"bolao_id"`
+}
+
+func (q *Queries) GetPalpiteByID(ctx context.Context, arg GetPalpiteByIDParams) (Palpite, error) {
+	row := q.db.QueryRow(ctx, getPalpiteByID, arg.ID, arg.BolaoID)
+	var i Palpite
+	err := row.Scan(
+		&i.ID,
+		&i.BolaoID,
+		&i.UserID,
+		&i.JogoID,
+		&i.HomeScore,
+		&i.AwayScore,
+		&i.Pontos,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Status,
+	)
+	return i, err
+}
+
 const getRanking = `-- name: GetRanking :many
 SELECT
     u.id AS user_id,
@@ -458,6 +485,9 @@ type UpsertPalpiteRetroativoParams struct {
 	AwayScore int32       `json:"away_score"`
 }
 
+// When the conflict row has status='aprovado', the WHERE clause causes Postgres to skip
+// the DO UPDATE, and RETURNING emits 0 rows. pgx surfaces this as pgx.ErrNoRows,
+// which the service maps to ErrPalpiteJaAprovado.
 func (q *Queries) UpsertPalpiteRetroativo(ctx context.Context, arg UpsertPalpiteRetroativoParams) (Palpite, error) {
 	row := q.db.QueryRow(ctx, upsertPalpiteRetroativo,
 		arg.BolaoID,

@@ -73,5 +73,8 @@ JOIN jogos j ON j.id = p.jogo_id
 WHERE p.bolao_id = $1 AND p.status = 'aprovado' AND j.starts_at <= NOW()
 ORDER BY p.updated_at DESC;
 
+-- name: GetPalpiteByID :one
+SELECT * FROM palpites WHERE id = $1 AND bolao_id = $2;
+
 -- name: DeletePalpite :exec
 DELETE FROM palpites WHERE id = $1 AND bolao_id = $2;

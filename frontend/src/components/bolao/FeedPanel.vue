@@ -73,6 +73,7 @@ function iconFor(ev: FeedEvento): string {
     participante_entrou: '👤',
     jogo_iniciado: '⚽',
     resultado_apurado: '📊',
+    palpite_removido: '🚫',
   }
   return icons[ev.tipo] ?? '•'
 }
@@ -107,6 +108,11 @@ function descFor(ev: FeedEvento): string {
         return `Resultado de ${jogo}: ${ev.payload.home_score}×${ev.payload.away_score}`
       }
       return `Resultado apurado em ${jogo}`
+    case 'palpite_removido':
+      if (ev.payload.home_score !== undefined) {
+        return `Admin removeu o palpite retroativo de ${name}: ${ev.payload.home_score}×${ev.payload.away_score} em ${jogo}`
+      }
+      return `Admin removeu palpite retroativo de ${name} em ${jogo}`
     default:
       return ''
   }
