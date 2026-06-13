@@ -106,8 +106,8 @@
         </div>
         <div v-else class="admin-empty">Nenhum palpite aguardando aprovação.</div>
 
-        <!-- Retroativos aprovados -->
-        <div v-if="palpitesAprovados.length > 0" class="admin-panel" style="margin-top: 12px;">
+        <!-- Retroativos aprovados (só exibe se retroativo está habilitado) -->
+        <div v-if="bolao?.retroativo_enabled && palpitesAprovados.length > 0" class="admin-panel" style="margin-top: 12px;">
           <div class="admin-panel-header">
             <span class="font-display" style="font-size: 0.85rem; letter-spacing: 0.1em; color: rgba(100,220,130,0.9);">RETROATIVOS APROVADOS</span>
             <span class="pending-count" style="background: rgba(100,220,130,0.15); color: rgba(100,220,130,0.9);">{{ palpitesAprovados.length }}</span>
@@ -305,6 +305,7 @@ async function toggleRetroativo() {
 }
 
 async function desaprovar(palpiteId: string) {
+  if (!window.confirm('Remover este palpite retroativo? Esta ação não pode ser desfeita.')) return
   try {
     await desaprovarPalpite(bolaoId, palpiteId)
     palpitesAprovados.value = palpitesAprovados.value.filter((p) => p.id !== palpiteId)
