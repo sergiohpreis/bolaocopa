@@ -8,24 +8,27 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sergiohpreis/bolaocopa/backend/internal/repository"
 )
 
 var (
-	ErrJogoNotFound         = errors.New("jogo not found")
-	ErrPalpiteFechado       = errors.New("palpite fechado: jogo já começou")
-	ErrJogoAindaAberto      = errors.New("jogo ainda não começou: palpite retroativo não permitido")
-	ErrPalpiteNaoEncontrado = errors.New("palpite not found")
-	ErrPalpiteJaAprovado    = errors.New("palpite já aprovado: não pode ser alterado retroativamente")
+	ErrJogoNotFound            = errors.New("jogo not found")
+	ErrPalpiteFechado          = errors.New("palpite fechado: jogo já começou")
+	ErrJogoAindaAberto         = errors.New("jogo ainda não começou: palpite retroativo não permitido")
+	ErrPalpiteNaoEncontrado    = errors.New("palpite not found")
+	ErrPalpiteJaAprovado       = errors.New("palpite já aprovado: não pode ser alterado retroativamente")
+	ErrRetroativoDesabilitado  = errors.New("palpites retroativos desabilitados neste bolão")
 )
 
 type PalpiteService struct {
 	q    repository.Querier
+	pool *pgxpool.Pool
 	feed *FeedService
 }
 
-func NewPalpiteService(q repository.Querier) *PalpiteService {
-	return &PalpiteService{q: q}
+func NewPalpiteService(q repository.Querier, pool *pgxpool.Pool) *PalpiteService {
+	return &PalpiteService{q: q, pool: pool}
 }
 
 func (s *PalpiteService) SetFeed(feed *FeedService) {
@@ -144,6 +147,17 @@ func (s *PalpiteService) UpsertRetroativo(ctx context.Context, bolaoID, userID, 
 		return repository.Palpite{}, ErrNotParticipante
 	}
 
+	bolao, err := s.q.GetBolaoByID(ctx, bid)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return repository.Palpite{}, ErrBolaoNotFound
+		}
+		return repository.Palpite{}, fmt.Errorf("getting bolao: %w", err)
+	}
+	if !bolao.RetroativoEnabled {
+		return repository.Palpite{}, ErrRetroativoDesabilitado
+	}
+
 	jogo, err := s.q.GetJogoByID(ctx, jid)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -233,7 +247,15 @@ func (s *PalpiteService) AprovarOuRejeitar(ctx context.Context, bolaoID, palpite
 		status = "aprovado"
 	}
 
-	p, err := s.q.AtualizarStatusPalpite(ctx, repository.AtualizarStatusPalpiteParams{
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return repository.Palpite{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	qtx := repository.New(tx)
+
+	p, err := qtx.AtualizarStatusPalpite(ctx, repository.AtualizarStatusPalpiteParams{
 		ID:      pid,
 		BolaoID: bid,
 		Status:  status,
@@ -246,27 +268,33 @@ func (s *PalpiteService) AprovarOuRejeitar(ctx context.Context, bolaoID, palpite
 	}
 
 	if aprovar {
-		// Se o jogo já terminou, calcular e persistir pontos imediatamente
-		jogo, err := s.q.GetJogoByID(ctx, p.JogoID)
+		// Se o jogo já terminou, calcular e persistir pontos imediatamente na mesma transação.
+		jogo, err := qtx.GetJogoByID(ctx, p.JogoID)
 		if err == nil && jogo.Finished && jogo.HomeScore.Valid && jogo.AwayScore.Valid {
 			pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32)
-			_ = s.q.UpdatePalpitePontos(ctx, repository.UpdatePalpitePontosParams{
+			if err := qtx.UpdatePalpitePontos(ctx, repository.UpdatePalpitePontosParams{
 				Pontos:  pgtype.Int4{Int32: pontos, Valid: true},
 				BolaoID: p.BolaoID,
 				JogoID:  p.JogoID,
 				UserID:  p.UserID,
-			})
+			}); err != nil {
+				return repository.Palpite{}, fmt.Errorf("updating pontos: %w", err)
+			}
 		}
+	}
 
-		if s.feed != nil {
-			userIDStr := p.UserID.String()
-			jogoIDStr := p.JogoID.String()
-			s.feed.InsertEvento(ctx, bolaoID, repository.FeedTipoPalpiteRegistrado, &userIDStr, &jogoIDStr, map[string]any{
-				"home_score": int(p.HomeScore),
-				"away_score": int(p.AwayScore),
-				"retroativo": true,
-			})
-		}
+	if err := tx.Commit(ctx); err != nil {
+		return repository.Palpite{}, fmt.Errorf("commit tx: %w", err)
+	}
+
+	if aprovar && s.feed != nil {
+		userIDStr := p.UserID.String()
+		jogoIDStr := p.JogoID.String()
+		s.feed.InsertEvento(ctx, bolaoID, repository.FeedTipoPalpiteRegistrado, &userIDStr, &jogoIDStr, map[string]any{
+			"home_score": int(p.HomeScore),
+			"away_score": int(p.AwayScore),
+			"retroativo": true,
+		})
 	}
 
 	return p, nil
@@ -289,4 +317,61 @@ func (s *PalpiteService) ListByUser(ctx context.Context, bolaoID, userID string)
 		items = []repository.Palpite{}
 	}
 	return items, nil
+}
+
+func (s *PalpiteService) ListRetroativosAprovados(ctx context.Context, bolaoID, adminUserID string) ([]repository.ListPalpitesRetroativosAprovadosRow, error) {
+	bid, err := parseUUID(bolaoID)
+	if err != nil {
+		return nil, ErrBolaoNotFound
+	}
+	uid, err := parseUUID(adminUserID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user id: %w", err)
+	}
+	bolao, err := s.q.GetBolaoByID(ctx, bid)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrBolaoNotFound
+		}
+		return nil, fmt.Errorf("getting bolao: %w", err)
+	}
+	if bolao.AdminID != uid {
+		return nil, ErrNotAdmin
+	}
+	items, err := s.q.ListPalpitesRetroativosAprovados(ctx, bid)
+	if err != nil {
+		return nil, fmt.Errorf("listing approved retroativos: %w", err)
+	}
+	if items == nil {
+		items = []repository.ListPalpitesRetroativosAprovadosRow{}
+	}
+	return items, nil
+}
+
+func (s *PalpiteService) Desaprovar(ctx context.Context, bolaoID, palpiteID, adminUserID string) error {
+	bid, err := parseUUID(bolaoID)
+	if err != nil {
+		return ErrBolaoNotFound
+	}
+	pid, err := parseUUID(palpiteID)
+	if err != nil {
+		return ErrPalpiteNaoEncontrado
+	}
+	uid, err := parseUUID(adminUserID)
+	if err != nil {
+		return fmt.Errorf("invalid user id: %w", err)
+	}
+
+	bolao, err := s.q.GetBolaoByID(ctx, bid)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrBolaoNotFound
+		}
+		return fmt.Errorf("getting bolao: %w", err)
+	}
+	if bolao.AdminID != uid {
+		return ErrNotAdmin
+	}
+
+	return s.q.DeletePalpite(ctx, repository.DeletePalpiteParams{ID: pid, BolaoID: bid})
 }

@@ -42,8 +42,10 @@ func RegisterRoutes(
 				r.Route("/{id}", func(r chi.Router) {
 					r.Get("/", bolao.Get)
 					r.Post("/regenerate-invite", bolao.RegenerateInvite)
+					r.Patch("/settings", bolao.UpdateSettings)
 					r.Get("/palpites", palpite.ListMine)
 					r.Get("/palpites/pendentes", palpite.ListPendentes)
+					r.Get("/palpites/retroativos", palpite.ListRetroativosAprovados)
 					r.Route("/palpites/{jogoId}", func(r chi.Router) {
 						r.Get("/", palpite.ListByJogo)
 						r.Put("/", palpite.Upsert)
@@ -51,6 +53,7 @@ func RegisterRoutes(
 					})
 					r.Post("/palpites/{palpiteId}/aprovar", palpite.Aprovar)
 					r.Post("/palpites/{palpiteId}/rejeitar", palpite.Rejeitar)
+					r.Delete("/palpites/{palpiteId}", palpite.Desaprovar)
 					r.Get("/ranking", ranking.Get)
 					r.Get("/feed", feed.List)
 				})

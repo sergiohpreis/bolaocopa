@@ -16,7 +16,7 @@
           class="feed-item"
           :class="`feed-item--${ev.tipo}`"
         >
-          <div class="feed-icon">{{ iconFor(ev.tipo) }}</div>
+          <div class="feed-icon">{{ iconFor(ev) }}</div>
           <div class="feed-content">
             <div class="feed-text">{{ descFor(ev) }}</div>
             <div class="feed-time">{{ timeAgo(ev.created_at) }}</div>
@@ -65,7 +65,8 @@ onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
 
-function iconFor(tipo: FeedEvento['tipo']): string {
+function iconFor(ev: FeedEvento): string {
+  if (ev.tipo === 'palpite_registrado' && ev.payload.retroativo) return '⏮'
   const icons: Record<FeedEvento['tipo'], string> = {
     palpite_registrado: '🎯',
     palpite_alterado: '✏️',
@@ -73,7 +74,7 @@ function iconFor(tipo: FeedEvento['tipo']): string {
     jogo_iniciado: '⚽',
     resultado_apurado: '📊',
   }
-  return icons[tipo] ?? '•'
+  return icons[ev.tipo] ?? '•'
 }
 
 function descFor(ev: FeedEvento): string {

@@ -14,6 +14,7 @@ type Querier interface {
 	AtualizarStatusPalpite(ctx context.Context, arg AtualizarStatusPalpiteParams) (Palpite, error)
 	CreateBolao(ctx context.Context, arg CreateBolaoParams) (Bolo, error)
 	CreateUserByEmail(ctx context.Context, arg CreateUserByEmailParams) (User, error)
+	DeletePalpite(ctx context.Context, arg DeletePalpiteParams) error
 	GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error)
 	GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error)
 	GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
@@ -31,8 +32,10 @@ type Querier interface {
 	ListPalpitesByBolaoAndUser(ctx context.Context, arg ListPalpitesByBolaoAndUserParams) ([]Palpite, error)
 	ListPalpitesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]Palpite, error)
 	ListPalpitesPendentes(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesPendentesRow, error)
+	ListPalpitesRetroativosAprovados(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesRetroativosAprovadosRow, error)
 	ListParticipantesByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListParticipantesByBolaoRow, error)
 	RegenerateInviteToken(ctx context.Context, arg RegenerateInviteTokenParams) (Bolo, error)
+	SetRetroativoEnabled(ctx context.Context, arg SetRetroativoEnabledParams) (Bolo, error)
 	UpdatePalpitePontos(ctx context.Context, arg UpdatePalpitePontosParams) error
 	UpsertJogo(ctx context.Context, arg UpsertJogoParams) (Jogo, error)
 	UpsertPalpite(ctx context.Context, arg UpsertPalpiteParams) (Palpite, error)

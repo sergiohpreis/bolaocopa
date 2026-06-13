@@ -42,6 +42,20 @@ func (q *Queries) AtualizarStatusPalpite(ctx context.Context, arg AtualizarStatu
 	return i, err
 }
 
+const deletePalpite = `-- name: DeletePalpite :exec
+DELETE FROM palpites WHERE id = $1 AND bolao_id = $2
+`
+
+type DeletePalpiteParams struct {
+	ID      pgtype.UUID `json:"id"`
+	BolaoID pgtype.UUID `json:"bolao_id"`
+}
+
+func (q *Queries) DeletePalpite(ctx context.Context, arg DeletePalpiteParams) error {
+	_, err := q.db.Exec(ctx, deletePalpite, arg.ID, arg.BolaoID)
+	return err
+}
+
 const getRanking = `-- name: GetRanking :many
 SELECT
     u.id AS user_id,
@@ -264,6 +278,73 @@ func (q *Queries) ListPalpitesPendentes(ctx context.Context, bolaoID pgtype.UUID
 	var items []ListPalpitesPendentesRow
 	for rows.Next() {
 		var i ListPalpitesPendentesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.BolaoID,
+			&i.UserID,
+			&i.JogoID,
+			&i.HomeScore,
+			&i.AwayScore,
+			&i.Pontos,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Status,
+			&i.UserName,
+			&i.HomeTeam,
+			&i.AwayTeam,
+			&i.StartsAt,
+			&i.Finished,
+			&i.JogoHomeScore,
+			&i.JogoAwayScore,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPalpitesRetroativosAprovados = `-- name: ListPalpitesRetroativosAprovados :many
+SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, u.name AS user_name, j.home_team, j.away_team, j.starts_at, j.finished, j.home_score AS jogo_home_score, j.away_score AS jogo_away_score
+FROM palpites p
+JOIN users u ON u.id = p.user_id
+JOIN jogos j ON j.id = p.jogo_id
+WHERE p.bolao_id = $1 AND p.status = 'aprovado' AND j.starts_at <= NOW()
+ORDER BY p.updated_at DESC
+`
+
+type ListPalpitesRetroativosAprovadosRow struct {
+	ID            pgtype.UUID        `json:"id"`
+	BolaoID       pgtype.UUID        `json:"bolao_id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	JogoID        pgtype.UUID        `json:"jogo_id"`
+	HomeScore     int32              `json:"home_score"`
+	AwayScore     int32              `json:"away_score"`
+	Pontos        pgtype.Int4        `json:"pontos"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	Status        string             `json:"status"`
+	UserName      string             `json:"user_name"`
+	HomeTeam      string             `json:"home_team"`
+	AwayTeam      string             `json:"away_team"`
+	StartsAt      pgtype.Timestamptz `json:"starts_at"`
+	Finished      bool               `json:"finished"`
+	JogoHomeScore pgtype.Int4        `json:"jogo_home_score"`
+	JogoAwayScore pgtype.Int4        `json:"jogo_away_score"`
+}
+
+func (q *Queries) ListPalpitesRetroativosAprovados(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesRetroativosAprovadosRow, error) {
+	rows, err := q.db.Query(ctx, listPalpitesRetroativosAprovados, bolaoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPalpitesRetroativosAprovadosRow
+	for rows.Next() {
+		var i ListPalpitesRetroativosAprovadosRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.BolaoID,

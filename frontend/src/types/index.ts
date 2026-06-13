@@ -16,6 +16,7 @@ export interface Bolao {
   name: string
   admin_id: string
   invite_token: string
+  retroativo_enabled: boolean
   created_at: string
   updated_at: string
 }

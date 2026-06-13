@@ -52,7 +52,7 @@ func main() {
 	authSvc := service.NewAuthService(queries, cfg.JWTSecret, cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL)
 	bolaoSvc := service.NewBolaoService(queries)
 	jogoSvc := service.NewJogoService(queries, cfg.FootballDataAPIKey)
-	palpiteSvc := service.NewPalpiteService(queries)
+	palpiteSvc := service.NewPalpiteService(queries, pool)
 	rankingSvc := service.NewRankingService(queries)
 	feedSvc := service.NewFeedService(queries)
 	bolaoSvc.SetFeed(feedSvc)

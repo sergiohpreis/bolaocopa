@@ -72,6 +72,20 @@ export async function rejeitarPalpite(bolaoId: string, palpiteId: string): Promi
   return data
 }
 
+export async function listPalpitesRetroativosAprovados(bolaoId: string): Promise<PalpitePendente[]> {
+  const { data } = await http.get<PalpitePendente[]>(`/boloes/${bolaoId}/palpites/retroativos`)
+  return data
+}
+
+export async function desaprovarPalpite(bolaoId: string, palpiteId: string): Promise<void> {
+  await http.delete(`/boloes/${bolaoId}/palpites/${palpiteId}`)
+}
+
+export async function setRetroativoEnabled(bolaoId: string, enabled: boolean): Promise<Bolao> {
+  const { data } = await http.patch<Bolao>(`/boloes/${bolaoId}/settings`, { retroativo_enabled: enabled })
+  return data
+}
+
 export async function getRanking(bolaoId: string): Promise<RankingEntry[]> {
   const { data } = await http.get<RankingEntry[]>(`/boloes/${bolaoId}/ranking`)
   return data

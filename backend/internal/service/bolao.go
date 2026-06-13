@@ -124,3 +124,22 @@ func (s *BolaoService) RegenerateInviteToken(ctx context.Context, bolaoID, userI
 	}
 	return bolao, nil
 }
+
+func (s *BolaoService) SetRetroativoEnabled(ctx context.Context, bolaoID, userID string, enabled bool) (repository.Bolo, error) {
+	bid, err := parseUUID(bolaoID)
+	if err != nil {
+		return repository.Bolo{}, ErrBolaoNotFound
+	}
+	uid, err := parseUUID(userID)
+	if err != nil {
+		return repository.Bolo{}, fmt.Errorf("invalid user id: %w", err)
+	}
+	bolao, err := s.q.SetRetroativoEnabled(ctx, repository.SetRetroativoEnabledParams{ID: bid, AdminID: uid, RetroativoEnabled: enabled})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return repository.Bolo{}, ErrNotAdmin
+		}
+		return repository.Bolo{}, fmt.Errorf("setting retroativo_enabled: %w", err)
+	}
+	return bolao, nil
+}

@@ -89,6 +89,10 @@ func (h *PalpiteHandler) UpsertRetroativo(w http.ResponseWriter, r *http.Request
 
 	palpite, err := h.svc.UpsertRetroativo(r.Context(), bolaoID, userID, jogoID, in.HomeScore, in.AwayScore)
 	if err != nil {
+		if errors.Is(err, service.ErrRetroativoDesabilitado) {
+			apierror.BadRequest(w, "palpites retroativos desabilitados neste bolão")
+			return
+		}
 		if errors.Is(err, service.ErrJogoAindaAberto) {
 			apierror.BadRequest(w, "jogo ainda não começou")
 			return
@@ -161,6 +165,44 @@ func (h *PalpiteHandler) avaliar(w http.ResponseWriter, r *http.Request, aprovar
 		return
 	}
 	writeJSON(w, http.StatusOK, palpite)
+}
+
+// GET /api/v1/boloes/{id}/palpites/retroativos
+func (h *PalpiteHandler) ListRetroativosAprovados(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	bolaoID := chi.URLParam(r, "id")
+
+	items, err := h.svc.ListRetroativosAprovados(r.Context(), bolaoID, userID)
+	if err != nil {
+		if errors.Is(err, service.ErrNotAdmin) {
+			apierror.Forbidden(w, "only the admin can list approved retroativos")
+			return
+		}
+		apierror.Internal(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+// DELETE /api/v1/boloes/{id}/palpites/{palpiteId}
+func (h *PalpiteHandler) Desaprovar(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	bolaoID := chi.URLParam(r, "id")
+	palpiteID := chi.URLParam(r, "palpiteId")
+
+	if err := h.svc.Desaprovar(r.Context(), bolaoID, palpiteID, userID); err != nil {
+		if errors.Is(err, service.ErrNotAdmin) {
+			apierror.Forbidden(w, "only the admin can remove palpites")
+			return
+		}
+		if errors.Is(err, service.ErrPalpiteNaoEncontrado) || errors.Is(err, service.ErrBolaoNotFound) {
+			apierror.NotFound(w, "palpite not found")
+			return
+		}
+		apierror.Internal(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // GET /api/v1/boloes/{id}/palpites

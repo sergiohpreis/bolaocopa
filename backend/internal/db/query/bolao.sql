@@ -20,3 +20,9 @@ UPDATE boloes
 SET invite_token = encode(gen_random_bytes(32), 'hex'), updated_at = NOW()
 WHERE id = $1 AND admin_id = $2
 RETURNING *;
+
+-- name: SetRetroativoEnabled :one
+UPDATE boloes
+SET retroativo_enabled = $3, updated_at = NOW()
+WHERE id = $1 AND admin_id = $2
+RETURNING *;
