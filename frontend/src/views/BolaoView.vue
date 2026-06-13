@@ -153,6 +153,7 @@
                 :jogo="jogo"
                 :palpite="palpiteMap[jogo.id]"
                 :bolao-id="bolaoId"
+                :retroativo-enabled="bolao?.retroativo_enabled ?? false"
                 @save="(h, a) => savePalpite(jogo.id, h, a)"
                 @save-retroativo="(h, a) => savePalpiteRetroativo(jogo.id, h, a)"
               />

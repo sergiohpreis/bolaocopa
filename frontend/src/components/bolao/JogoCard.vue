@@ -110,8 +110,13 @@
         <div class="rejected-hint">palpite anterior rejeitado pelo admin</div>
       </template>
 
-      <!-- Retroativo: jogo fechado, sem palpite -->
-      <template v-else-if="isClosed || jogo.finished">
+      <!-- Sem palpite, retroativo desabilitado -->
+      <template v-else-if="(isClosed || jogo.finished) && !retroativoEnabled">
+        <div class="no-palpite">Palpite não registrado</div>
+      </template>
+
+      <!-- Retroativo: jogo fechado, sem palpite, e retroativo habilitado -->
+      <template v-else-if="(isClosed || jogo.finished) && retroativoEnabled">
         <div class="palpite-input-group">
           <div class="score-input-wrap">
             <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
@@ -169,7 +174,7 @@ import { getPalpitesByJogo } from '@/api/bolao'
 import { traduzTime } from '@/utils/teams'
 import type { Jogo, Palpite, PalpiteDeJogo } from '@/types'
 
-const props = defineProps<{ jogo: Jogo; palpite?: Palpite; bolaoId: string }>()
+const props = defineProps<{ jogo: Jogo; palpite?: Palpite; bolaoId: string; retroativoEnabled?: boolean }>()
 const emit = defineEmits<{
   (e: 'save', home: number, away: number): void
   (e: 'saveRetroativo', home: number, away: number): void

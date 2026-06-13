@@ -9,6 +9,8 @@
           </div>
           <h2 class="modal-title font-display">RETROATIVO</h2>
           <p class="modal-subtitle">O que há de novo</p>
+
+          <p class="section-label font-display">PARA TODOS</p>
           <ul class="changes">
             <li class="change-item">
               <span class="change-icon">⏮</span>
@@ -21,7 +23,7 @@
               <span class="change-icon">✅</span>
               <div>
                 <div class="change-title">Aprovação pelo admin</div>
-                <div class="change-desc">O admin do bolão revisa e aprova — garantia contra trapaça.</div>
+                <div class="change-desc">O admin revisa e aprova cada palpite retroativo — garantia contra trapaça.</div>
               </div>
             </li>
             <li class="change-item">
@@ -29,6 +31,24 @@
               <div>
                 <div class="change-title">Entra no ranking normalmente</div>
                 <div class="change-desc">Palpite aprovado pontua igual a qualquer outro: 10 pelo placar exato, 3 pelo vencedor.</div>
+              </div>
+            </li>
+          </ul>
+
+          <p class="section-label font-display">PARA O ADMIN</p>
+          <ul class="changes">
+            <li class="change-item">
+              <span class="change-icon">⚙</span>
+              <div>
+                <div class="change-title">Nova aba ADMIN</div>
+                <div class="change-desc">Gerencie palpites pendentes e configurações do bolão sem misturar com os jogos.</div>
+              </div>
+            </li>
+            <li class="change-item">
+              <span class="change-icon">🔒</span>
+              <div>
+                <div class="change-title">Retroativo vem desabilitado</div>
+                <div class="change-desc">Vá na aba ADMIN e ative "Palpites Retroativos" para liberar para o seu grupo.</div>
               </div>
             </li>
           </ul>
@@ -117,10 +137,18 @@ function dismiss() {
   letter-spacing: 0.04em;
 }
 
+.section-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-bottom: 10px;
+}
+
 .changes {
   list-style: none;
   padding: 0;
-  margin: 0 0 24px;
+  margin: 0 0 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
