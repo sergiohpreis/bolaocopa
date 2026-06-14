@@ -55,7 +55,7 @@ func main() {
 	palpiteSvc := service.NewPalpiteService(queries, pool)
 	rankingSvc := service.NewRankingService(queries)
 	feedSvc := service.NewFeedService(queries)
-	taxaSvc := service.NewTaxaService(queries)
+	taxaSvc := service.NewTaxaService(queries, pool)
 	bolaoSvc.SetFeed(feedSvc)
 	palpiteSvc.SetFeed(feedSvc)
 	rankingSvc.SetFeed(feedSvc)

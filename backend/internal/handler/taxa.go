@@ -22,10 +22,10 @@ func NewTaxaHandler(svc *service.TaxaService) *TaxaHandler {
 // POST /api/v1/boloes/{id}/taxa/proposta
 func (h *TaxaHandler) Propor(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Valor float64 `json:"valor"`
+		Valor string `json:"valor"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Valor <= 0 {
-		apierror.BadRequest(w, "valor must be a positive number")
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Valor == "" {
+		apierror.BadRequest(w, "valor must be a non-empty decimal string (e.g. \"50.00\")")
 		return
 	}
 	userID := middleware.UserIDFromContext(r.Context())
@@ -58,22 +58,26 @@ func (h *TaxaHandler) Propor(w http.ResponseWriter, r *http.Request) {
 // POST /api/v1/boloes/{id}/taxa/votar
 func (h *TaxaHandler) Votar(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Aprovado bool `json:"aprovado"`
+		Aprovado *bool `json:"aprovado"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Aprovado == nil {
 		apierror.BadRequest(w, "aprovado (bool) is required")
 		return
 	}
 	userID := middleware.UserIDFromContext(r.Context())
 	bolaoID := chi.URLParam(r, "id")
 
-	if err := h.svc.Votar(r.Context(), bolaoID, userID, in.Aprovado); err != nil {
+	if err := h.svc.Votar(r.Context(), bolaoID, userID, *in.Aprovado); err != nil {
 		if errors.Is(err, service.ErrSemProposta) {
 			apierror.NotFound(w, "nenhuma proposta de taxa ativa")
 			return
 		}
 		if errors.Is(err, service.ErrJaVotou) {
 			apierror.Conflict(w, "você já votou nesta proposta")
+			return
+		}
+		if errors.Is(err, service.ErrVotoNaoElegivel) {
+			apierror.Forbidden(w, "você entrou no bolão após a proposta e não pode votar")
 			return
 		}
 		if errors.Is(err, service.ErrNotParticipante) {

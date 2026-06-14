@@ -38,12 +38,21 @@ func (q *Queries) CountParticipantesNaMomento(ctx context.Context, arg CountPart
 }
 
 const countVotosFavoraveis = `-- name: CountVotosFavoraveis :one
-SELECT COUNT(*) FROM taxa_entrada_votos
-WHERE proposta_id = $1 AND aprovado = true
+SELECT COUNT(*) FROM taxa_entrada_votos tv
+JOIN participantes p ON p.user_id = tv.user_id AND p.bolao_id = $2
+WHERE tv.proposta_id = $1 AND tv.aprovado = true AND p.joined_at <= $3
 `
 
-func (q *Queries) CountVotosFavoraveis(ctx context.Context, propostaID pgtype.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, countVotosFavoraveis, propostaID)
+type CountVotosFavoraveisParams struct {
+	PropostaID pgtype.UUID        `json:"proposta_id"`
+	BolaoID    pgtype.UUID        `json:"bolao_id"`
+	JoinedAt   pgtype.Timestamptz `json:"joined_at"`
+}
+
+// Counts favorable votes only from participants eligible at proposal time (joined_at <= proposta.created_at).
+// This ensures the same population is used for both total and favorable counts.
+func (q *Queries) CountVotosFavoraveis(ctx context.Context, arg CountVotosFavoraveisParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countVotosFavoraveis, arg.PropostaID, arg.BolaoID, arg.JoinedAt)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -52,7 +61,7 @@ func (q *Queries) CountVotosFavoraveis(ctx context.Context, propostaID pgtype.UU
 const definirTaxa = `-- name: DefinirTaxa :one
 UPDATE boloes
 SET taxa_entrada = $2, updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND taxa_entrada IS NULL
 RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada
 `
 
@@ -94,6 +103,23 @@ func (q *Queries) GetPropostaAtiva(ctx context.Context, bolaoID pgtype.UUID) (Ta
 	return i, err
 }
 
+const getPropostaAtivaForUpdate = `-- name: GetPropostaAtivaForUpdate :one
+SELECT id, bolao_id, valor, proposta_por, created_at FROM taxa_entrada_propostas WHERE bolao_id = $1 FOR UPDATE
+`
+
+func (q *Queries) GetPropostaAtivaForUpdate(ctx context.Context, bolaoID pgtype.UUID) (TaxaEntradaProposta, error) {
+	row := q.db.QueryRow(ctx, getPropostaAtivaForUpdate, bolaoID)
+	var i TaxaEntradaProposta
+	err := row.Scan(
+		&i.ID,
+		&i.BolaoID,
+		&i.Valor,
+		&i.PropostaPor,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getTaxaEntrada = `-- name: GetTaxaEntrada :one
 SELECT taxa_entrada FROM boloes WHERE id = $1
 `
@@ -103,6 +129,27 @@ func (q *Queries) GetTaxaEntrada(ctx context.Context, id pgtype.UUID) (pgtype.Nu
 	var taxa_entrada pgtype.Numeric
 	err := row.Scan(&taxa_entrada)
 	return taxa_entrada, err
+}
+
+const isParticipanteElegivel = `-- name: IsParticipanteElegivel :one
+SELECT EXISTS (
+    SELECT 1 FROM participantes
+    WHERE bolao_id = $1 AND user_id = $2 AND joined_at <= $3
+)
+`
+
+type IsParticipanteElegivelParams struct {
+	BolaoID  pgtype.UUID        `json:"bolao_id"`
+	UserID   pgtype.UUID        `json:"user_id"`
+	JoinedAt pgtype.Timestamptz `json:"joined_at"`
+}
+
+// Returns true if the user was a participant at or before proposta.created_at.
+func (q *Queries) IsParticipanteElegivel(ctx context.Context, arg IsParticipanteElegivelParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isParticipanteElegivel, arg.BolaoID, arg.UserID, arg.JoinedAt)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const proporTaxa = `-- name: ProporTaxa :one
@@ -143,6 +190,9 @@ type RegistrarVotoParams struct {
 	Aprovado   bool        `json:"aprovado"`
 }
 
+// ON CONFLICT DO NOTHING: when user already voted, RETURNING yields no rows.
+// pgx returns pgx.ErrNoRows, which the service maps to ErrJaVotou.
+// Do NOT change to DO UPDATE without updating the service layer.
 func (q *Queries) RegistrarVoto(ctx context.Context, arg RegistrarVotoParams) (TaxaEntradaVoto, error) {
 	row := q.db.QueryRow(ctx, registrarVoto, arg.PropostaID, arg.UserID, arg.Aprovado)
 	var i TaxaEntradaVoto

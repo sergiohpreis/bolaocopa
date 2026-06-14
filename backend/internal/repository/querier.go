@@ -14,7 +14,9 @@ type Querier interface {
 	AtualizarStatusPalpite(ctx context.Context, arg AtualizarStatusPalpiteParams) (Palpite, error)
 	CancelarProposta(ctx context.Context, bolaoID pgtype.UUID) error
 	CountParticipantesNaMomento(ctx context.Context, arg CountParticipantesNaMomentoParams) (int64, error)
-	CountVotosFavoraveis(ctx context.Context, propostaID pgtype.UUID) (int64, error)
+	// Counts favorable votes only from participants eligible at proposal time (joined_at <= proposta.created_at).
+	// This ensures the same population is used for both total and favorable counts.
+	CountVotosFavoraveis(ctx context.Context, arg CountVotosFavoraveisParams) (int64, error)
 	CreateBolao(ctx context.Context, arg CreateBolaoParams) (Bolo, error)
 	CreateUserByEmail(ctx context.Context, arg CreateUserByEmailParams) (User, error)
 	DefinirTaxa(ctx context.Context, arg DefinirTaxaParams) (Bolo, error)
@@ -24,12 +26,15 @@ type Querier interface {
 	GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
 	GetPalpiteByID(ctx context.Context, arg GetPalpiteByIDParams) (Palpite, error)
 	GetPropostaAtiva(ctx context.Context, bolaoID pgtype.UUID) (TaxaEntradaProposta, error)
+	GetPropostaAtivaForUpdate(ctx context.Context, bolaoID pgtype.UUID) (TaxaEntradaProposta, error)
 	GetRanking(ctx context.Context, bolaoID pgtype.UUID) ([]GetRankingRow, error)
 	GetTaxaEntrada(ctx context.Context, id pgtype.UUID) (pgtype.Numeric, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	InsertFeedEvento(ctx context.Context, arg InsertFeedEventoParams) (FeedEvento, error)
 	IsParticipante(ctx context.Context, arg IsParticipanteParams) (bool, error)
+	// Returns true if the user was a participant at or before proposta.created_at.
+	IsParticipanteElegivel(ctx context.Context, arg IsParticipanteElegivelParams) (bool, error)
 	JoinBolao(ctx context.Context, arg JoinBolaoParams) (Participante, error)
 	ListBoloesByUser(ctx context.Context, userID pgtype.UUID) ([]Bolo, error)
 	ListFeedByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListFeedByBolaoRow, error)
@@ -43,6 +48,9 @@ type Querier interface {
 	ListParticipantesByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListParticipantesByBolaoRow, error)
 	ProporTaxa(ctx context.Context, arg ProporTaxaParams) (TaxaEntradaProposta, error)
 	RegenerateInviteToken(ctx context.Context, arg RegenerateInviteTokenParams) (Bolo, error)
+	// ON CONFLICT DO NOTHING: when user already voted, RETURNING yields no rows.
+	// pgx returns pgx.ErrNoRows, which the service maps to ErrJaVotou.
+	// Do NOT change to DO UPDATE without updating the service layer.
 	RegistrarVoto(ctx context.Context, arg RegistrarVotoParams) (TaxaEntradaVoto, error)
 	SetRetroativoEnabled(ctx context.Context, arg SetRetroativoEnabledParams) (Bolo, error)
 	UpdatePalpitePontos(ctx context.Context, arg UpdatePalpitePontosParams) error
