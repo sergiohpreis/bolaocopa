@@ -20,6 +20,7 @@ const (
 	FeedTipoJogoIniciado       FeedTipo = "jogo_iniciado"
 	FeedTipoResultadoApurado   FeedTipo = "resultado_apurado"
 	FeedTipoPalpiteRemovido    FeedTipo = "palpite_removido"
+	FeedTipoTaxaAprovada       FeedTipo = "taxa_aprovada"
 )
 
 func (e *FeedTipo) Scan(src interface{}) error {
@@ -65,6 +66,7 @@ type Bolo struct {
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 	RetroativoEnabled bool               `json:"retroativo_enabled"`
+	TaxaEntrada       pgtype.Numeric     `json:"taxa_entrada"`
 }
 
 type FeedEvento struct {
@@ -111,6 +113,22 @@ type Participante struct {
 	BolaoID  pgtype.UUID        `json:"bolao_id"`
 	UserID   pgtype.UUID        `json:"user_id"`
 	JoinedAt pgtype.Timestamptz `json:"joined_at"`
+}
+
+type TaxaEntradaProposta struct {
+	ID          pgtype.UUID        `json:"id"`
+	BolaoID     pgtype.UUID        `json:"bolao_id"`
+	Valor       pgtype.Numeric     `json:"valor"`
+	PropostaPor pgtype.UUID        `json:"proposta_por"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type TaxaEntradaVoto struct {
+	ID         pgtype.UUID        `json:"id"`
+	PropostaID pgtype.UUID        `json:"proposta_id"`
+	UserID     pgtype.UUID        `json:"user_id"`
+	Aprovado   bool               `json:"aprovado"`
+	VotedAt    pgtype.Timestamptz `json:"voted_at"`
 }
 
 type User struct {

@@ -12,14 +12,20 @@ import (
 
 type Querier interface {
 	AtualizarStatusPalpite(ctx context.Context, arg AtualizarStatusPalpiteParams) (Palpite, error)
+	CancelarProposta(ctx context.Context, bolaoID pgtype.UUID) error
+	CountParticipantesNaMomento(ctx context.Context, arg CountParticipantesNaMomentoParams) (int64, error)
+	CountVotosFavoraveis(ctx context.Context, propostaID pgtype.UUID) (int64, error)
 	CreateBolao(ctx context.Context, arg CreateBolaoParams) (Bolo, error)
 	CreateUserByEmail(ctx context.Context, arg CreateUserByEmailParams) (User, error)
+	DefinirTaxa(ctx context.Context, arg DefinirTaxaParams) (Bolo, error)
 	DeletePalpite(ctx context.Context, arg DeletePalpiteParams) error
 	GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error)
 	GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error)
 	GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
 	GetPalpiteByID(ctx context.Context, arg GetPalpiteByIDParams) (Palpite, error)
+	GetPropostaAtiva(ctx context.Context, bolaoID pgtype.UUID) (TaxaEntradaProposta, error)
 	GetRanking(ctx context.Context, bolaoID pgtype.UUID) ([]GetRankingRow, error)
+	GetTaxaEntrada(ctx context.Context, id pgtype.UUID) (pgtype.Numeric, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	InsertFeedEvento(ctx context.Context, arg InsertFeedEventoParams) (FeedEvento, error)
@@ -35,7 +41,9 @@ type Querier interface {
 	ListPalpitesPendentes(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesPendentesRow, error)
 	ListPalpitesRetroativosAprovados(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesRetroativosAprovadosRow, error)
 	ListParticipantesByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListParticipantesByBolaoRow, error)
+	ProporTaxa(ctx context.Context, arg ProporTaxaParams) (TaxaEntradaProposta, error)
 	RegenerateInviteToken(ctx context.Context, arg RegenerateInviteTokenParams) (Bolo, error)
+	RegistrarVoto(ctx context.Context, arg RegistrarVotoParams) (TaxaEntradaVoto, error)
 	SetRetroativoEnabled(ctx context.Context, arg SetRetroativoEnabledParams) (Bolo, error)
 	UpdatePalpitePontos(ctx context.Context, arg UpdatePalpitePontosParams) error
 	UpsertJogo(ctx context.Context, arg UpsertJogoParams) (Jogo, error)
