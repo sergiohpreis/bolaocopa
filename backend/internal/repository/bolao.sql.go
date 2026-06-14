@@ -14,7 +14,7 @@ import (
 const createBolao = `-- name: CreateBolao :one
 INSERT INTO boloes (name, admin_id)
 VALUES ($1, $2)
-RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled
+RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada
 `
 
 type CreateBolaoParams struct {
@@ -33,12 +33,13 @@ func (q *Queries) CreateBolao(ctx context.Context, arg CreateBolaoParams) (Bolo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RetroativoEnabled,
+		&i.TaxaEntrada,
 	)
 	return i, err
 }
 
 const getBolaoByID = `-- name: GetBolaoByID :one
-SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled FROM boloes WHERE id = $1
+SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada FROM boloes WHERE id = $1
 `
 
 func (q *Queries) GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error) {
@@ -52,12 +53,13 @@ func (q *Queries) GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RetroativoEnabled,
+		&i.TaxaEntrada,
 	)
 	return i, err
 }
 
 const getBolaoByInviteToken = `-- name: GetBolaoByInviteToken :one
-SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled FROM boloes WHERE invite_token = $1
+SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada FROM boloes WHERE invite_token = $1
 `
 
 func (q *Queries) GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error) {
@@ -71,12 +73,13 @@ func (q *Queries) GetBolaoByInviteToken(ctx context.Context, inviteToken string)
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RetroativoEnabled,
+		&i.TaxaEntrada,
 	)
 	return i, err
 }
 
 const listBoloesByUser = `-- name: ListBoloesByUser :many
-SELECT b.id, b.name, b.admin_id, b.invite_token, b.created_at, b.updated_at, b.retroativo_enabled FROM boloes b
+SELECT b.id, b.name, b.admin_id, b.invite_token, b.created_at, b.updated_at, b.retroativo_enabled, b.taxa_entrada FROM boloes b
 JOIN participantes p ON p.bolao_id = b.id
 WHERE p.user_id = $1
 ORDER BY b.created_at DESC
@@ -99,6 +102,7 @@ func (q *Queries) ListBoloesByUser(ctx context.Context, userID pgtype.UUID) ([]B
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RetroativoEnabled,
+			&i.TaxaEntrada,
 		); err != nil {
 			return nil, err
 		}
@@ -114,7 +118,7 @@ const regenerateInviteToken = `-- name: RegenerateInviteToken :one
 UPDATE boloes
 SET invite_token = encode(gen_random_bytes(32), 'hex'), updated_at = NOW()
 WHERE id = $1 AND admin_id = $2
-RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled
+RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada
 `
 
 type RegenerateInviteTokenParams struct {
@@ -133,6 +137,7 @@ func (q *Queries) RegenerateInviteToken(ctx context.Context, arg RegenerateInvit
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RetroativoEnabled,
+		&i.TaxaEntrada,
 	)
 	return i, err
 }
@@ -141,7 +146,7 @@ const setRetroativoEnabled = `-- name: SetRetroativoEnabled :one
 UPDATE boloes
 SET retroativo_enabled = $3, updated_at = NOW()
 WHERE id = $1 AND admin_id = $2
-RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled
+RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada
 `
 
 type SetRetroativoEnabledParams struct {
@@ -161,6 +166,7 @@ func (q *Queries) SetRetroativoEnabled(ctx context.Context, arg SetRetroativoEna
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RetroativoEnabled,
+		&i.TaxaEntrada,
 	)
 	return i, err
 }

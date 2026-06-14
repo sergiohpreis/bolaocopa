@@ -59,8 +59,66 @@
         </div>
       </div>
 
+      <!-- Taxa de entrada card (visível a todos) — só exibe se há algo a mostrar -->
+      <div v-if="taxaEstado.taxa_definida || taxaEstado.proposta_ativa" class="taxa-card animate-fade-up stagger-2">
+
+        <!-- Label fixo sempre no topo -->
+        <span class="taxa-label">TAXA DE ENTRADA</span>
+
+        <!-- Taxa já definida -->
+        <div v-if="taxaEstado.taxa_definida" class="taxa-definida-body">
+          <span class="taxa-valor">R$ {{ taxaEstado.taxa_definida }}</span>
+          <span class="taxa-badge-definida">✓ APROVADA</span>
+        </div>
+
+        <!-- Proposta ativa -->
+        <div v-else-if="taxaEstado.proposta_ativa" class="taxa-proposta-body">
+          <div class="taxa-proposta-top">
+            <span class="taxa-valor">R$ {{ taxaEstado.proposta_ativa.valor }}</span>
+            <span class="taxa-pendente-badge">
+              <span class="taxa-pendente-dot" />
+              {{ taxaEstado.votos_pendentes }} {{ taxaEstado.votos_pendentes === 1 ? 'voto pendente' : 'votos pendentes' }}
+            </span>
+          </div>
+          <div v-if="!jaVotei" class="taxa-vote-btns">
+            <button class="taxa-btn-sim" :disabled="taxaLoading" @click="votar(true)">
+              <span>✓</span> SIM
+            </button>
+            <button class="taxa-btn-nao" :disabled="taxaLoading" @click="votar(false)">
+              <span>✕</span> NÃO
+            </button>
+          </div>
+          <div v-else class="taxa-votado">
+            <span class="taxa-votado-check">✓</span>
+            <span>Seu voto foi registrado</span>
+          </div>
+        </div>
+
+      </div>
+
       <!-- Tab: Admin -->
       <div v-if="isAdmin" v-show="tab === 'admin'" class="admin-tab">
+
+        <!-- Propor taxa de entrada -->
+        <div class="settings-card" v-if="!taxaEstado.taxa_definida && !taxaEstado.proposta_ativa">
+          <div class="settings-info" style="margin-bottom: 12px;">
+            <span class="font-display settings-title">TAXA DE ENTRADA</span>
+            <span class="settings-desc">Proponha um valor para votação de todos os participantes. A taxa só é definida se aprovada por unanimidade.</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <input
+              v-model="taxaValorInput"
+              type="text"
+              placeholder="Ex: 50.00"
+              class="taxa-input"
+              :disabled="taxaLoading"
+              @keydown.enter="submeterProposta"
+            />
+            <button class="taxa-propor-btn" :disabled="taxaLoading || !taxaValorInput.trim()" @click="submeterProposta">
+              PROPOR
+            </button>
+          </div>
+        </div>
 
         <!-- Toggle retroativo -->
         <div class="settings-card">
@@ -180,13 +238,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import { getBolao, listPalpites, upsertPalpite, upsertPalpiteRetroativo, listPalpitesPendentes, aprovarPalpite, rejeitarPalpite, listPalpitesRetroativosAprovados, desaprovarPalpite, setRetroativoEnabled } from '@/api/bolao'
+import { getBolao, listPalpites, upsertPalpite, upsertPalpiteRetroativo, listPalpitesPendentes, aprovarPalpite, rejeitarPalpite, listPalpitesRetroativosAprovados, desaprovarPalpite, setRetroativoEnabled, getTaxaEstado, proporTaxa, votarTaxa } from '@/api/bolao'
 import { listJogos } from '@/api/jogo'
 import { useAuthStore } from '@/stores/auth'
 import { traduzTime } from '@/utils/teams'
 import JogoCard from '@/components/bolao/JogoCard.vue'
 import FeedPanel from '@/components/bolao/FeedPanel.vue'
-import type { Bolao, Jogo, Palpite, PalpitePendente } from '@/types'
+import type { Bolao, Jogo, Palpite, PalpitePendente, TaxaEstado } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -201,6 +259,11 @@ const palpitesAprovados = ref<PalpitePendente[]>([])
 const loadingJogos = ref(true)
 const copied = ref(false)
 const tab = ref<'jogos' | 'feed' | 'admin'>('jogos')
+
+const taxaEstado = ref<TaxaEstado>({ votos_pendentes: 0 })
+const taxaValorInput = ref('')
+const taxaLoading = ref(false)
+const jaVotei = ref(false)
 
 const isAdmin = computed(() => bolao.value?.admin_id === authStore.currentUserId)
 
@@ -227,14 +290,17 @@ const jogosByStage = computed(() => {
 
 onMounted(async () => {
   try {
-    const [b, j, p] = await Promise.all([
+    const [b, j, p, taxa] = await Promise.all([
       getBolao(bolaoId),
       listJogos(),
       listPalpites(bolaoId),
+      getTaxaEstado(bolaoId),
     ])
     bolao.value = b
     jogos.value = j
     palpites.value = p
+    taxaEstado.value = taxa
+    jaVotei.value = taxa.meu_voto != null
     if (b.admin_id === authStore.currentUserId) {
       ;[palpitesPendentes.value, palpitesAprovados.value] = await Promise.all([
         listPalpitesPendentes(bolaoId),
@@ -313,6 +379,49 @@ async function desaprovar(palpiteId: string) {
     toast.add({ severity: 'warn', summary: 'Palpite removido.', life: 2000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: 'Erro', detail: e.message, life: 3000 })
+  }
+}
+
+async function carregarTaxa() {
+  try {
+    taxaEstado.value = await getTaxaEstado(bolaoId)
+    jaVotei.value = taxaEstado.value.meu_voto != null
+  } catch {
+    // silently ignore — taxa card will just not update
+  }
+}
+
+async function submeterProposta() {
+  if (!taxaValorInput.value.trim()) return
+  taxaLoading.value = true
+  try {
+    await proporTaxa(bolaoId, taxaValorInput.value.trim())
+    taxaValorInput.value = ''
+    await carregarTaxa()
+    toast.add({ severity: 'success', summary: 'Proposta enviada!', life: 3000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'Erro', detail: e.message, life: 3000 })
+  } finally {
+    taxaLoading.value = false
+  }
+}
+
+async function votar(aprovado: boolean) {
+  taxaLoading.value = true
+  try {
+    await votarTaxa(bolaoId, aprovado)
+    jaVotei.value = true
+    await carregarTaxa()
+    toast.add({ severity: 'success', summary: aprovado ? 'Voto registrado!' : 'Proposta cancelada.', life: 3000 })
+  } catch (e: any) {
+    if (e.response?.status === 409) {
+      jaVotei.value = true
+      await carregarTaxa()
+    } else {
+      toast.add({ severity: 'error', summary: 'Erro', detail: e.message, life: 3000 })
+    }
+  } finally {
+    taxaLoading.value = false
   }
 }
 
@@ -680,4 +789,167 @@ function formatStage(stage: string) {
   font-size: 0.85rem;
   padding: 20px 0;
 }
+
+/* Taxa de entrada */
+.taxa-card {
+  background: rgba(57,255,106,0.04);
+  border: 1px solid rgba(57,255,106,0.18);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.taxa-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 8px;
+}
+.taxa-valor {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.75rem;
+  color: var(--neon);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(57,255,106,0.3);
+}
+
+/* Estado: taxa definida */
+.taxa-definida-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.taxa-badge-definida {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  background: rgba(57,255,106,0.1);
+  border: 1px solid rgba(57,255,106,0.28);
+  border-radius: 4px;
+  color: var(--neon);
+  padding: 3px 10px;
+}
+
+/* Estado: proposta ativa */
+.taxa-proposta-body { display: flex; flex-direction: column; gap: 12px; }
+.taxa-proposta-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.taxa-pendente-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  background: rgba(255,200,60,0.1);
+  border: 1px solid rgba(255,200,60,0.25);
+  border-radius: 4px;
+  color: rgba(255,200,60,0.85);
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.taxa-pendente-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255,200,60,0.85);
+  animation: pulse-dot 2s infinite;
+}
+.taxa-vote-btns {
+  display: flex;
+  gap: 8px;
+}
+.taxa-btn-sim,
+.taxa-btn-nao {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+  border-radius: 8px;
+  padding: 10px 0;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.taxa-btn-sim {
+  background: rgba(57,255,106,0.1);
+  color: var(--neon);
+  border: 1px solid rgba(57,255,106,0.3);
+}
+.taxa-btn-sim:hover:not(:disabled) {
+  background: rgba(57,255,106,0.18);
+  transform: translateY(-1px);
+}
+.taxa-btn-nao {
+  background: rgba(255,70,70,0.08);
+  color: rgba(255,100,100,0.85);
+  border: 1px solid rgba(255,70,70,0.25);
+}
+.taxa-btn-nao:hover:not(:disabled) {
+  background: rgba(255,70,70,0.15);
+  transform: translateY(-1px);
+}
+.taxa-btn-sim:disabled,
+.taxa-btn-nao:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+/* Estado: já votei */
+.taxa-votado {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(57,255,106,0.55);
+  font-size: 0.82rem;
+}
+.taxa-votado-check {
+  font-size: 0.9rem;
+  color: var(--neon);
+  opacity: 0.7;
+}
+
+/* Admin: propor taxa */
+.taxa-input {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-family: 'DM Mono', monospace;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.taxa-input:focus {
+  border-color: rgba(57,255,106,0.4);
+  box-shadow: 0 0 0 3px rgba(57,255,106,0.08);
+}
+.taxa-input::placeholder { color: var(--text-muted); }
+.taxa-propor-btn {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  background: rgba(57,255,106,0.1);
+  border: 1px solid rgba(57,255,106,0.28);
+  border-radius: 8px;
+  padding: 9px 18px;
+  color: var(--neon);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.taxa-propor-btn:hover:not(:disabled) {
+  background: rgba(57,255,106,0.18);
+  transform: translateY(-1px);
+}
+.taxa-propor-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 </style>

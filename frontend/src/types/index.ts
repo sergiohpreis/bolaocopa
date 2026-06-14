@@ -17,6 +17,7 @@ export interface Bolao {
   admin_id: string
   invite_token: string
   retroativo_enabled: boolean
+  taxa_entrada?: string | null
   created_at: string
   updated_at: string
 }
@@ -76,10 +77,20 @@ export interface PalpiteDeJogo {
   user_avatar?: string
 }
 
+export interface TaxaEstado {
+  taxa_definida?: string
+  proposta_ativa?: {
+    id: string
+    valor: string
+  }
+  votos_pendentes: number
+  meu_voto?: boolean | null
+}
+
 export interface FeedEvento {
   id: string
   bolao_id: string
-  tipo: 'palpite_registrado' | 'palpite_alterado' | 'participante_entrou' | 'jogo_iniciado' | 'resultado_apurado' | 'palpite_removido'
+  tipo: 'palpite_registrado' | 'palpite_alterado' | 'participante_entrou' | 'jogo_iniciado' | 'resultado_apurado' | 'palpite_removido' | 'taxa_aprovada'
   user_id?: string
   user_name?: string
   jogo_id?: string

@@ -55,9 +55,11 @@ func main() {
 	palpiteSvc := service.NewPalpiteService(queries, pool)
 	rankingSvc := service.NewRankingService(queries)
 	feedSvc := service.NewFeedService(queries)
+	taxaSvc := service.NewTaxaService(queries, pool)
 	bolaoSvc.SetFeed(feedSvc)
 	palpiteSvc.SetFeed(feedSvc)
 	rankingSvc.SetFeed(feedSvc)
+	taxaSvc.SetFeed(feedSvc)
 
 	allowedOrigins := splitOrigins(cfg.AllowedOrigins)
 
@@ -78,6 +80,7 @@ func main() {
 		handler.NewPalpiteHandler(palpiteSvc),
 		handler.NewRankingHandler(rankingSvc, bolaoSvc),
 		handler.NewFeedHandler(feedSvc),
+		handler.NewTaxaHandler(taxaSvc),
 		authMw,
 	)
 

@@ -26,6 +26,17 @@ func parseUUID(s string) (pgtype.UUID, error) {
 	return u, nil
 }
 
+func numericToString(n pgtype.Numeric) (string, error) {
+	if !n.Valid {
+		return "", nil
+	}
+	f, err := n.Float64Value()
+	if err != nil || !f.Valid {
+		return "", fmt.Errorf("converting numeric to string: %w", err)
+	}
+	return fmt.Sprintf("%.2f", f.Float64), nil
+}
+
 const googleUserInfoURL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 func fetchGoogleUserInfo(ctx context.Context, client *http.Client) (*GoogleUserInfo, error) {

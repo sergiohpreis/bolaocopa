@@ -14,6 +14,7 @@ func RegisterRoutes(
 	palpite *PalpiteHandler,
 	ranking *RankingHandler,
 	feed *FeedHandler,
+	taxa *TaxaHandler,
 	authMw func(http.Handler) http.Handler,
 ) {
 	r.Get("/health", healthHandler)
@@ -56,6 +57,9 @@ func RegisterRoutes(
 					r.Delete("/palpites/{palpiteId}", palpite.Desaprovar)
 					r.Get("/ranking", ranking.Get)
 					r.Get("/feed", feed.List)
+					r.Get("/taxa", taxa.GetEstado)
+					r.Post("/taxa/proposta", taxa.Propor)
+					r.Post("/taxa/votar", taxa.Votar)
 				})
 			})
 		})
