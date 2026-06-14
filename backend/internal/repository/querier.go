@@ -24,6 +24,7 @@ type Querier interface {
 	GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error)
 	GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error)
 	GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
+	GetMeuVoto(ctx context.Context, arg GetMeuVotoParams) (bool, error)
 	GetPalpiteByID(ctx context.Context, arg GetPalpiteByIDParams) (Palpite, error)
 	GetPropostaAtiva(ctx context.Context, bolaoID pgtype.UUID) (TaxaEntradaProposta, error)
 	GetPropostaAtivaForUpdate(ctx context.Context, bolaoID pgtype.UUID) (TaxaEntradaProposta, error)

@@ -1,5 +1,5 @@
 import http from './http'
-import type { Bolao, Palpite, PalpitePendente, PalpiteDeJogo, RankingEntry, FeedEvento } from '@/types'
+import type { Bolao, Palpite, PalpitePendente, PalpiteDeJogo, RankingEntry, FeedEvento, TaxaEstado } from '@/types'
 
 export async function createBolao(name: string): Promise<Bolao> {
   const { data } = await http.post<Bolao>('/boloes', { name })
@@ -84,6 +84,19 @@ export async function desaprovarPalpite(bolaoId: string, palpiteId: string): Pro
 export async function setRetroativoEnabled(bolaoId: string, enabled: boolean): Promise<Bolao> {
   const { data } = await http.patch<Bolao>(`/boloes/${bolaoId}/settings`, { retroativo_enabled: enabled })
   return data
+}
+
+export async function getTaxaEstado(bolaoId: string): Promise<TaxaEstado> {
+  const { data } = await http.get<TaxaEstado>(`/boloes/${bolaoId}/taxa`)
+  return data
+}
+
+export async function proporTaxa(bolaoId: string, valor: string): Promise<void> {
+  await http.post(`/boloes/${bolaoId}/taxa/proposta`, { valor })
+}
+
+export async function votarTaxa(bolaoId: string, aprovado: boolean): Promise<void> {
+  await http.post(`/boloes/${bolaoId}/taxa/votar`, { aprovado })
 }
 
 export async function getRanking(bolaoId: string): Promise<RankingEntry[]> {

@@ -74,6 +74,7 @@ function iconFor(ev: FeedEvento): string {
     jogo_iniciado: '⚽',
     resultado_apurado: '📊',
     palpite_removido: '🚫',
+    taxa_aprovada: '💰',
   }
   return icons[ev.tipo] ?? '•'
 }
@@ -113,6 +114,8 @@ function descFor(ev: FeedEvento): string {
         return `Admin removeu o palpite retroativo de ${name}: ${ev.payload.home_score}×${ev.payload.away_score} em ${jogo}`
       }
       return `Admin removeu palpite retroativo de ${name} em ${jogo}`
+    case 'taxa_aprovada':
+      return ev.payload.valor ? `Taxa de entrada definida: R$ ${ev.payload.valor}` : 'Taxa de entrada definida'
     default:
       return ''
   }

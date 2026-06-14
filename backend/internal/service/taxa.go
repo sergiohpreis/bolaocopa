@@ -20,9 +20,10 @@ var (
 )
 
 type TaxaEstado struct {
-	TaxaDefinida   *string        `json:"taxa_definida,omitempty"`
+	TaxaDefinida   *string         `json:"taxa_definida,omitempty"`
 	PropostaAtiva  *PropostaResumo `json:"proposta_ativa,omitempty"`
-	VotosPendentes int64          `json:"votos_pendentes"`
+	VotosPendentes int64           `json:"votos_pendentes"`
+	MeuVoto        *bool           `json:"meu_voto,omitempty"`
 }
 
 type PropostaResumo struct {
@@ -285,6 +286,17 @@ func (s *TaxaService) GetEstado(ctx context.Context, bolaoID, userID string) (Ta
 		pendentes = 0
 	}
 	estado.VotosPendentes = pendentes
+
+	meuVoto, err := s.q.GetMeuVoto(ctx, repository.GetMeuVotoParams{
+		PropostaID: proposta.ID,
+		UserID:     uid,
+	})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return TaxaEstado{}, fmt.Errorf("getting meu_voto: %w", err)
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		estado.MeuVoto = &meuVoto
+	}
 
 	return estado, nil
 }

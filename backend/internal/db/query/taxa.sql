@@ -47,3 +47,6 @@ RETURNING *;
 
 -- name: GetTaxaEntrada :one
 SELECT taxa_entrada FROM boloes WHERE id = $1;
+
+-- name: GetMeuVoto :one
+SELECT aprovado FROM taxa_entrada_votos WHERE proposta_id = $1 AND user_id = $2;

@@ -86,6 +86,22 @@ func (q *Queries) DefinirTaxa(ctx context.Context, arg DefinirTaxaParams) (Bolo,
 	return i, err
 }
 
+const getMeuVoto = `-- name: GetMeuVoto :one
+SELECT aprovado FROM taxa_entrada_votos WHERE proposta_id = $1 AND user_id = $2
+`
+
+type GetMeuVotoParams struct {
+	PropostaID pgtype.UUID `json:"proposta_id"`
+	UserID     pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetMeuVoto(ctx context.Context, arg GetMeuVotoParams) (bool, error) {
+	row := q.db.QueryRow(ctx, getMeuVoto, arg.PropostaID, arg.UserID)
+	var aprovado bool
+	err := row.Scan(&aprovado)
+	return aprovado, err
+}
+
 const getPropostaAtiva = `-- name: GetPropostaAtiva :one
 SELECT id, bolao_id, valor, proposta_por, created_at FROM taxa_entrada_propostas WHERE bolao_id = $1
 `
