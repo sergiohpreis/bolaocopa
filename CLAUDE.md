@@ -36,3 +36,17 @@ Novas features são anunciadas via **`src/components/WhatsNewModal.vue`**.
 - Bump a versão no badge, no storage key, e atualizar o conteúdo do modal
 - Versão atual: **v1.2.0** (taxa de entrada)
 - Toda feature nova deve atualizar o modal para **v1.3.0**, etc.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues (`sergiohpreis/bolaocopa`). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout — one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
