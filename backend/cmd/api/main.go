@@ -121,9 +121,9 @@ func main() {
 			if err := rankingSvc.ComputeScoresForFinishedJogos(syncCtx); err != nil {
 				slog.Warn("background scoring failed", "error", err)
 			}
-			// Notifica fim de jogo após scoring para incluir winners corretamente.
+			// Notifica fim de jogo com context próprio — syncCtx pode já ter expirado.
 			if len(recentlyFinished) > 0 {
-				rankingSvc.NotifyRecentlyFinished(syncCtx, recentlyFinished)
+				rankingSvc.NotifyRecentlyFinished(context.Background(), recentlyFinished)
 			}
 		}
 		doSync()

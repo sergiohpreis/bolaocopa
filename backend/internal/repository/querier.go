@@ -56,7 +56,7 @@ type Querier interface {
 	RegistrarVoto(ctx context.Context, arg RegistrarVotoParams) (TaxaEntradaVoto, error)
 	SetRetroativoEnabled(ctx context.Context, arg SetRetroativoEnabledParams) (Bolo, error)
 	UpdatePalpitePontos(ctx context.Context, arg UpdatePalpitePontosParams) error
-	UpsertJogo(ctx context.Context, arg UpsertJogoParams) (Jogo, error)
+	UpsertJogo(ctx context.Context, arg UpsertJogoParams) (UpsertJogoRow, error)
 	UpsertPalpite(ctx context.Context, arg UpsertPalpiteParams) (Palpite, error)
 	// When the conflict row has status='aprovado', the WHERE clause causes Postgres to skip
 	// the DO UPDATE, and RETURNING emits 0 rows. pgx surfaces this as pgx.ErrNoRows,

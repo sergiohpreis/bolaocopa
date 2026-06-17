@@ -132,9 +132,10 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) error {
 		// The sync runs every 5 min, so each jogo falls in each window exactly once.
 		//   faltam_dez_minutos: starts_at in [now+8min, now+13min)
 		//   partida_iniciando:  starts_at in [now-3min, now+3min)
+		// Uses a detached context so the notification POST survives syncCtx expiry.
 		if !finished {
 			untilStart := t.Sub(now)
-			s.dispatchMatchNotifications(ctx, untilStart, m.HomeTeam.Name, m.AwayTeam.Name)
+			s.dispatchMatchNotifications(context.Background(), untilStart, m.HomeTeam.Name, m.AwayTeam.Name)
 		}
 	}
 
