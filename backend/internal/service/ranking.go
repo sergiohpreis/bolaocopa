@@ -42,6 +42,44 @@ func (s *RankingService) Get(ctx context.Context, bolaoID string) ([]repository.
 	return items, nil
 }
 
+// NotifyRecentlyFinished dispara a notificação de fim de jogo para jogos recém-finalizados,
+// consolidando os winners de todos os bolões. Deve ser chamado após ComputeScoresForFinishedJogos.
+func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []repository.Jogo) {
+	for _, jogo := range jogos {
+		var winners []WAWinner
+		palpites, err := s.q.ListPalpitesByJogo(ctx, jogo.ID)
+		if err != nil {
+			slog.Warn("wa notify: listing palpites", "jogo", jogo.ExternalID, "err", err)
+		} else {
+			// Agrupa por bolão para buscar nome do usuário
+			bolaoIDs := map[string]bool{}
+			for _, p := range palpites {
+				bolaoIDs[uuidToString(p.BolaoID)] = true
+			}
+			for bolaoIDStr := range bolaoIDs {
+				bid, _ := parseUUID(bolaoIDStr)
+				rows, err := s.q.ListPalpitesByBolaoAndJogo(ctx, repository.ListPalpitesByBolaoAndJogoParams{
+					BolaoID: bid,
+					JogoID:  jogo.ID,
+				})
+				if err != nil {
+					continue
+				}
+				for _, r := range rows {
+					if r.Pontos.Valid && r.Pontos.Int32 > 0 {
+						winners = append(winners, WAWinner{Name: r.UserName, Pontos: int(r.Pontos.Int32)})
+					}
+				}
+			}
+		}
+		go s.waNotif.NotifyFimDeJogo(ctx, "",
+			jogo.HomeTeam, int(jogo.HomeScore.Int32),
+			jogo.AwayTeam, int(jogo.AwayScore.Int32),
+			winners,
+		)
+	}
+}
+
 // ComputeScoresForFinishedJogos fetches all finished jogos with known scores
 // and computes pontos for every palpite.
 func (s *RankingService) ComputeScoresForFinishedJogos(ctx context.Context) error {
@@ -96,31 +134,8 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 				"away_score": jogo.AwayScore.Int32,
 			})
 		}
-
-		// Fetch palpites com nome do usuário para montar a lista de vencedores
-		bid, _ := parseUUID(bolaoIDStr)
-		rows, err := s.q.ListPalpitesByBolaoAndJogo(ctx, repository.ListPalpitesByBolaoAndJogoParams{
-			BolaoID: bid,
-			JogoID:  jogo.ID,
-		})
-		if err != nil {
-			slog.Warn("wa notify: listing palpites for winners", "bolao", bolaoIDStr, "err", err)
-			continue
-		}
-
-		var winners []WAWinner
-		for _, r := range rows {
-			if r.Pontos.Valid && r.Pontos.Int32 > 0 {
-				winners = append(winners, WAWinner{Name: r.UserName, Pontos: int(r.Pontos.Int32)})
-			}
-		}
-
-		go s.waNotif.NotifyFimDeJogo(ctx, bolaoIDStr,
-			jogo.HomeTeam, int(jogo.HomeScore.Int32),
-			jogo.AwayTeam, int(jogo.AwayScore.Int32),
-			winners,
-		)
 	}
+
 	return nil
 }
 

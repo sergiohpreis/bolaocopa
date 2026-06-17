@@ -115,8 +115,15 @@ func main() {
 			defer cancel()
 			if err := jogoSvc.SyncFromAPI(syncCtx); err != nil {
 				slog.Warn("background sync failed", "error", err)
-			} else if err := rankingSvc.ComputeScoresForFinishedJogos(syncCtx); err != nil {
+				return
+			}
+			recentlyFinished := jogoSvc.DrainRecentlyFinished()
+			if err := rankingSvc.ComputeScoresForFinishedJogos(syncCtx); err != nil {
 				slog.Warn("background scoring failed", "error", err)
+			}
+			// Notifica fim de jogo após scoring para incluir winners corretamente.
+			if len(recentlyFinished) > 0 {
+				rankingSvc.NotifyRecentlyFinished(syncCtx, recentlyFinished)
 			}
 		}
 		doSync()

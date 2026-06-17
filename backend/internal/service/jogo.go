@@ -16,9 +16,10 @@ import (
 var footballAPIClient = &http.Client{Timeout: 15 * time.Second}
 
 type JogoService struct {
-	q        repository.Querier
-	apiKey   string
-	waNotif  WANotifier
+	q                repository.Querier
+	apiKey           string
+	waNotif          WANotifier
+	recentlyFinished []repository.Jogo // jogos que ficaram FINISHED neste sync run
 }
 
 func NewJogoService(q repository.Querier, apiKey string) *JogoService {
@@ -27,6 +28,14 @@ func NewJogoService(q repository.Querier, apiKey string) *JogoService {
 
 func (s *JogoService) SetWANotifier(n WANotifier) {
 	s.waNotif = n
+}
+
+// DrainRecentlyFinished retorna e limpa os jogos que ficaram FINISHED no último sync.
+// Chamado pelo scoring após calcular pontos, para disparar a notificação com winners.
+func (s *JogoService) DrainRecentlyFinished() []repository.Jogo {
+	jogos := s.recentlyFinished
+	s.recentlyFinished = nil
+	return jogos
 }
 
 func (s *JogoService) ListAll(ctx context.Context) ([]repository.Jogo, error) {
@@ -95,9 +104,17 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) error {
 			Finished:     finished,
 		}
 
-		if _, err := s.q.UpsertJogo(ctx, params); err != nil {
+		upserted, err := s.q.UpsertJogo(ctx, params)
+		if err != nil {
 			slog.Warn("failed to upsert jogo", "external_id", params.ExternalID, "error", err)
 			continue
+		}
+
+		// Rastreia jogos recém-finalizados (updated_at < 8 min) para notificar após o scoring.
+		if finished && upserted.HomeScore.Valid && upserted.AwayScore.Valid {
+			if now.Sub(upserted.UpdatedAt.Time) < 8*time.Minute {
+				s.recentlyFinished = append(s.recentlyFinished, upserted)
+			}
 		}
 
 		// Dispatch WhatsApp notifications based on match timing.
