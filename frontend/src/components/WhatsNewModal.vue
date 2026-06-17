@@ -4,44 +4,26 @@
       <div v-if="show" class="overlay" @click.self="dismiss">
         <div class="modal">
           <div class="modal-header">
-            <span class="version-badge font-display">v1.2.0</span>
+            <span class="version-badge font-display">v1.3.0</span>
             <button class="close-btn" @click="dismiss">×</button>
           </div>
-          <h2 class="modal-title font-display">TAXA DE ENTRADA</h2>
+          <h2 class="modal-title font-display">EXCLUIR BOLÃO</h2>
           <p class="modal-subtitle">O que há de novo</p>
-
-          <p class="section-label font-display">PARA TODOS</p>
-          <ul class="changes">
-            <li class="change-item">
-              <span class="change-icon">💰</span>
-              <div>
-                <div class="change-title">Valor do bolão visível</div>
-                <div class="change-desc">A taxa de entrada aparece no topo do bolão para todos os participantes.</div>
-              </div>
-            </li>
-            <li class="change-item">
-              <span class="change-icon">🗳️</span>
-              <div>
-                <div class="change-title">Votação unânime</div>
-                <div class="change-desc">O admin propõe um valor e todos precisam aprovar. Um "não" cancela na hora.</div>
-              </div>
-            </li>
-          </ul>
 
           <p class="section-label font-display">PARA O ADMIN</p>
           <ul class="changes">
             <li class="change-item">
-              <span class="change-icon">📋</span>
+              <span class="change-icon">🗑️</span>
               <div>
-                <div class="change-title">Propor taxa na aba ADMIN</div>
-                <div class="change-desc">Digite o valor e envie — os participantes verão os botões de voto imediatamente.</div>
+                <div class="change-title">Exclusão com confirmação</div>
+                <div class="change-desc">Na aba ADMIN, o botão "Excluir bolão" abre um resumo do impacto antes de confirmar — participantes, palpites e histórico.</div>
               </div>
             </li>
             <li class="change-item">
-              <span class="change-icon">🔒</span>
+              <span class="change-icon">⚠️</span>
               <div>
-                <div class="change-title">Imutável após aprovação</div>
-                <div class="change-desc">Uma vez definida por unanimidade, a taxa não pode ser alterada.</div>
+                <div class="change-title">Ação permanente</div>
+                <div class="change-desc">A exclusão remove tudo em cascata e não pode ser desfeita. Somente o admin pode fazer isso.</div>
               </div>
             </li>
           </ul>
@@ -55,7 +37,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const STORAGE_KEY = 'whats_new_seen_v1.2.0'
+const STORAGE_KEY = 'whats_new_seen_v1.3.0'
 const show = ref(!localStorage.getItem(STORAGE_KEY))
 
 function dismiss() {

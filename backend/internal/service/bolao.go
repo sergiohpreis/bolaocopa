@@ -125,6 +125,31 @@ func (s *BolaoService) RegenerateInviteToken(ctx context.Context, bolaoID, userI
 	return bolao, nil
 }
 
+func (s *BolaoService) Delete(ctx context.Context, bolaoID, userID string) error {
+	bid, err := parseUUID(bolaoID)
+	if err != nil {
+		return ErrBolaoNotFound
+	}
+	uid, err := parseUUID(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user id: %w", err)
+	}
+	bolao, err := s.q.GetBolaoByID(ctx, bid)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrBolaoNotFound
+		}
+		return fmt.Errorf("getting bolao: %w", err)
+	}
+	if bolao.AdminID != uid {
+		return ErrNotAdmin
+	}
+	if err := s.q.DeleteBolao(ctx, repository.DeleteBolaoParams{ID: bid, AdminID: uid}); err != nil {
+		return fmt.Errorf("deleting bolao: %w", err)
+	}
+	return nil
+}
+
 func (s *BolaoService) SetRetroativoEnabled(ctx context.Context, bolaoID, userID string, enabled bool) (repository.Bolo, error) {
 	bid, err := parseUUID(bolaoID)
 	if err != nil {

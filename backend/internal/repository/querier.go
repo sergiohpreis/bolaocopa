@@ -20,6 +20,7 @@ type Querier interface {
 	CreateBolao(ctx context.Context, arg CreateBolaoParams) (Bolo, error)
 	CreateUserByEmail(ctx context.Context, arg CreateUserByEmailParams) (User, error)
 	DefinirTaxa(ctx context.Context, arg DefinirTaxaParams) (Bolo, error)
+	DeleteBolao(ctx context.Context, arg DeleteBolaoParams) error
 	DeletePalpite(ctx context.Context, arg DeletePalpiteParams) error
 	GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error)
 	GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error)
