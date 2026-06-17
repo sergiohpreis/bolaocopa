@@ -3,6 +3,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
+ARG VITE_WHATSAPP_API_SECRET
 RUN npm run build
 
 FROM nginx:alpine
