@@ -62,6 +62,23 @@ services:
     networks:
       - bolaocopa-internal
 
+  # PROTOTYPE — throwaway WhatsApp notification service
+  bolaocopa-whatsapp:
+    build:
+      context: ./whatsapp
+      dockerfile: Dockerfile
+    container_name: bolaocopa-whatsapp
+    restart: unless-stopped
+    profiles: ["whatsapp"]
+    environment:
+      PORT: "9090"
+      STORE_PATH: /data
+      API_SECRET: ${WHATSAPP_API_SECRET} # required — service refuses to start if unset or default
+    volumes:
+      - bolaocopa-whatsapp-data:/data
+    networks:
+      - bolaocopa-internal
+
   bolaocopa-tunnel:
     image: cloudflare/cloudflared:latest
     container_name: bolaocopa-tunnel
@@ -74,6 +91,7 @@ services:
 
 volumes:
   bolaocopa-postgres-data:
+  bolaocopa-whatsapp-data: # PROTOTYPE
 
 networks:
   bolaocopa-internal:

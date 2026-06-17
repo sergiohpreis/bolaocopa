@@ -106,3 +106,24 @@ export interface RankingEntry {
   total_pontos: number
   palpites_computados: number
 }
+
+// PROTOTYPE — WhatsApp integration types
+export interface WAStatus {
+  state: 'disconnected' | 'connecting' | 'awaiting_qr' | 'connected'
+  linked_group: string
+  has_qr: boolean
+}
+
+export interface WAGroup {
+  jid: string
+  name: string
+}
+
+export interface WANotifyPayload {
+  type: 'fim_de_jogo' | 'faltam_dez_minutos' | 'partida_iniciando'
+  home_team: string
+  away_team: string
+  home_score?: number
+  away_score?: number
+  winners?: { name: string; pontos: number }[]
+}

@@ -200,6 +200,9 @@
           </div>
         </div>
 
+        <!-- WhatsApp — PROTOTYPE -->
+        <WhatsAppAdminPanel :bolao-name="bolao?.name ?? ''" />
+
         <!-- Excluir bolão -->
         <div class="danger-zone">
           <div class="danger-zone-label font-display">ZONA DE PERIGO</div>
@@ -268,6 +271,7 @@ import { traduzTime } from '@/utils/teams'
 import JogoCard from '@/components/bolao/JogoCard.vue'
 import FeedPanel from '@/components/bolao/FeedPanel.vue'
 import ExcluirBolaoDrawer from '@/components/bolao/ExcluirBolaoDrawer.vue'
+import WhatsAppAdminPanel from '@/components/WhatsAppAdminPanel.vue' // PROTOTYPE
 import type { Bolao, Jogo, Palpite, PalpitePendente, TaxaEstado } from '@/types'
 
 const route = useRoute()
