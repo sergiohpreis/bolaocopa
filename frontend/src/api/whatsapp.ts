@@ -40,6 +40,14 @@ export async function linkGroup(jid: string): Promise<void> {
   await wa.post('/link', { jid })
 }
 
+export async function toggleNotifications(enabled: boolean): Promise<void> {
+  await wa.post('/toggle', { enabled })
+}
+
+export async function sendHealthcheck(): Promise<void> {
+  await wa.post('/healthcheck')
+}
+
 export async function sendNotification(payload: WANotifyPayload): Promise<void> {
   await wa.post('/notify', payload)
 }

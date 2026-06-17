@@ -112,6 +112,7 @@ export interface WAStatus {
   state: 'disconnected' | 'connecting' | 'awaiting_qr' | 'connected'
   linked_group: string
   has_qr: boolean
+  enabled: boolean
 }
 
 export interface WAGroup {

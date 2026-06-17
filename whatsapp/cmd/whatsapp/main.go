@@ -67,12 +67,13 @@ func main() {
 	ntfr := notifier.New(notifierAdapter{mgr})
 
 	r.With(auth).Route("/", func(r chi.Router) {
-		// GET /status — connection state + linked group
+		// GET /status — connection state + linked group + enabled flag
 		r.Get("/status", func(w http.ResponseWriter, r *http.Request) {
 			respond(w, map[string]any{
 				"state":        string(mgr.State()),
 				"linked_group": mgr.LinkedGroup(),
 				"has_qr":       mgr.QRBase64() != "",
+				"enabled":      mgr.Enabled(),
 			})
 		})
 
@@ -117,6 +118,34 @@ func main() {
 			respond(w, groups)
 		})
 
+		// POST /toggle — enable or disable automatic notifications
+		r.Post("/toggle", func(w http.ResponseWriter, r *http.Request) {
+			var body struct {
+				Enabled bool `json:"enabled"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, "invalid json", http.StatusBadRequest)
+				return
+			}
+			mgr.SetEnabled(body.Enabled)
+			respond(w, map[string]bool{"enabled": body.Enabled})
+		})
+
+		// POST /healthcheck — send a test message to the linked group
+		r.Post("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
+			jid := mgr.LinkedGroup()
+			if jid == "" {
+				http.Error(w, "no linked group", http.StatusConflict)
+				return
+			}
+			msg := "✅ *Bolaocopa* — notificações ativas e funcionando!"
+			if err := mgr.SendText(r.Context(), jid, msg); err != nil {
+				http.Error(w, err.Error(), http.StatusServiceUnavailable)
+				return
+			}
+			respond(w, map[string]string{"status": "sent"})
+		})
+
 		// POST /link — link a group JID (empty JID = unlink)
 		r.Post("/link", func(w http.ResponseWriter, r *http.Request) {
 			var body struct {
@@ -130,8 +159,12 @@ func main() {
 			respond(w, map[string]string{"linked_group": body.JID})
 		})
 
-		// POST /notify — send a typed notification
+		// POST /notify — send a typed notification (no-op if disabled)
 		r.Post("/notify", func(w http.ResponseWriter, r *http.Request) {
+			if !mgr.Enabled() {
+				respond(w, map[string]string{"status": "disabled"})
+				return
+			}
 			var body struct {
 				Type      string `json:"type"`
 				HomeTeam  string `json:"home_team"`

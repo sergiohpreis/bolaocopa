@@ -40,12 +40,14 @@ type Manager struct {
 	state       State
 	qrBase64    string
 	linkedGroup string // JID do grupo vinculado
+	enabled     bool   // notificações automáticas ativas
 	storePath   string
 }
 
 func New(storePath string) *Manager {
 	return &Manager{
 		state:     StateDisconnected,
+		enabled:   true,
 		storePath: storePath,
 	}
 }
@@ -184,6 +186,18 @@ func (m *Manager) LinkGroup(jid string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.linkedGroup = jid
+}
+
+func (m *Manager) Enabled() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.enabled
+}
+
+func (m *Manager) SetEnabled(v bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.enabled = v
 }
 
 func (m *Manager) ListGroups(ctx context.Context) ([]Group, error) {

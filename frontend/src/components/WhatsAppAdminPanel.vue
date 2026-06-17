@@ -1,5 +1,4 @@
-<!-- PROTOTYPE — throwaway. Answers: does the QR→connect→link-group→test-notify flow
-     feel right for the admin UX? -->
+<!-- PROTOTYPE — throwaway. Admin panel for WhatsApp group notifications. -->
 <template>
   <div class="wa-panel">
     <div class="wa-header">
@@ -8,7 +7,7 @@
       <span class="wa-badge" :class="badgeClass">{{ badgeLabel }}</span>
     </div>
 
-    <!-- Disconnected / awaiting QR without active QR (show reconnect button) -->
+    <!-- Disconnected / awaiting QR without active QR (show connect button) -->
     <template v-if="status?.state === 'disconnected' || (status?.state === 'awaiting_qr' && !qrImage)">
       <p class="wa-hint">Conecte seu WhatsApp para enviar notificações ao grupo do bolão.</p>
       <button class="wa-btn-primary" :disabled="connecting" @click="startConnect">
@@ -32,15 +31,12 @@
       <!-- Group linking -->
       <div v-if="!status.linked_group" class="wa-section">
         <p class="wa-hint">Selecione o grupo do WhatsApp onde as notificações serão enviadas.</p>
-        <p v-if="props.bolaoName" class="wa-hint" style="color: var(--neon); opacity: 0.8;">
-          Exibindo apenas grupos cujo nome contém <strong>"{{ props.bolaoName }}"</strong>.
-        </p>
         <button class="wa-btn-ghost" :disabled="loadingGroups" @click="fetchGroups">
           {{ loadingGroups ? 'Carregando…' : 'Carregar grupos' }}
         </button>
-        <div v-if="filteredGroups.length" class="wa-group-list">
+        <div v-if="groups.length" class="wa-group-list">
           <button
-            v-for="g in filteredGroups"
+            v-for="g in groups"
             :key="g.jid"
             class="wa-group-item"
             @click="selectGroup(g.jid)"
@@ -48,12 +44,9 @@
             {{ g.name }}
           </button>
         </div>
-        <p v-else-if="groups.length && !filteredGroups.length" class="wa-hint" style="color: #ff6b6b;">
-          Nenhum grupo encontrado com o nome "{{ props.bolaoName }}". Crie um grupo no WhatsApp com esse nome.
-        </p>
       </div>
 
-      <!-- Group linked — test notifications -->
+      <!-- Group linked -->
       <div v-else class="wa-section">
         <div class="wa-linked-group">
           <span class="wa-linked-label">GRUPO VINCULADO</span>
@@ -61,18 +54,28 @@
           <button class="wa-btn-link" @click="unlinkGroup">trocar</button>
         </div>
 
-        <p class="wa-hint" style="margin-top: 1rem;">Testar notificações:</p>
-        <div class="wa-test-btns">
-          <button class="wa-btn-test" :disabled="sending" @click="testNotify('faltam_dez_minutos')">
-            ⏰ Faltam 10 min
-          </button>
-          <button class="wa-btn-test" :disabled="sending" @click="testNotify('partida_iniciando')">
-            🚀 Partida iniciou
-          </button>
-          <button class="wa-btn-test" :disabled="sending" @click="testNotify('fim_de_jogo')">
-            ⚽ Fim de jogo
+        <!-- Toggle de notificações automáticas -->
+        <div class="wa-toggle-row">
+          <span class="wa-toggle-label">Notificações automáticas</span>
+          <button
+            class="wa-toggle"
+            :class="{ active: status.enabled }"
+            :disabled="toggling"
+            @click="doToggle"
+          >
+            <span class="wa-toggle-knob" />
           </button>
         </div>
+        <p class="wa-hint" style="margin-top: -0.25rem;">
+          {{ status.enabled
+            ? 'Ativas — fim de jogo, faltam 10 min, partida iniciando.'
+            : 'Pausadas — nenhuma mensagem será enviada.' }}
+        </p>
+
+        <!-- Botão de teste único -->
+        <button class="wa-btn-ghost wa-btn-test" :disabled="sendingTest" @click="doHealthcheck">
+          {{ sendingTest ? 'Enviando…' : '🔔 Enviar mensagem de teste' }}
+        </button>
         <p v-if="lastResult" class="wa-result" :class="lastResultOk ? 'ok' : 'err'">
           {{ lastResult }}
         </p>
@@ -90,12 +93,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import {
-  getStatus, getQR, connect, disconnect, listGroups, linkGroup, sendNotification,
+  getStatus, getQR, connect, disconnect, listGroups, linkGroup,
+  toggleNotifications, sendHealthcheck,
 } from '@/api/whatsapp'
 import type { WAStatus, WAGroup } from '@/types'
 import { useWAPoller } from '@/composables/useWAPoller'
-
-const props = withDefaults(defineProps<{ bolaoName?: string }>(), { bolaoName: '' })
 
 const status = ref<WAStatus | null>(null)
 const qrImage = ref<string>('')
@@ -103,7 +105,8 @@ const groups = ref<WAGroup[]>([])
 const error = ref('')
 const connecting = ref(false)
 const loadingGroups = ref(false)
-const sending = ref(false)
+const toggling = ref(false)
+const sendingTest = ref(false)
 const lastResult = ref('')
 const lastResultOk = ref(true)
 
@@ -123,12 +126,6 @@ const badgeLabel = computed(() => {
   }
 })
 
-const filteredGroups = computed(() => {
-  if (!props.bolaoName) return groups.value
-  const needle = props.bolaoName.toLowerCase()
-  return groups.value.filter(g => g.name.toLowerCase().includes(needle))
-})
-
 const groupName = computed(() => {
   if (!status.value?.linked_group) return ''
   return groups.value.find(g => g.jid === status.value!.linked_group)?.name ?? ''
@@ -141,12 +138,10 @@ async function refresh() {
     if (status.value.state === 'awaiting_qr' && status.value.has_qr) {
       qrImage.value = await getQR()
     }
-    // Auto-load groups when connected so we can resolve the linked group name
     if (status.value.state === 'connected' && !groups.value.length && !loadingGroups.value) {
       await fetchGroups()
     }
-  } catch (e: any) {
-    // service may not be running — show soft error
+  } catch {
     error.value = 'Serviço WhatsApp indisponível. Suba o container com --profile whatsapp.'
   }
 }
@@ -201,37 +196,41 @@ async function selectGroup(jid: string) {
 
 async function unlinkGroup() {
   await linkGroup('')
+  groups.value = []
   await refresh()
 }
 
-async function testNotify(type: 'fim_de_jogo' | 'faltam_dez_minutos' | 'partida_iniciando') {
-  sending.value = true
+async function doToggle() {
+  if (!status.value) return
+  toggling.value = true
+  try {
+    await toggleNotifications(!status.value.enabled)
+    await refresh()
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    toggling.value = false
+  }
+}
+
+async function doHealthcheck() {
+  sendingTest.value = true
   lastResult.value = ''
   try {
-    await sendNotification({
-      type,
-      home_team: 'Brasil',
-      away_team: 'Argentina',
-      home_score: type === 'fim_de_jogo' ? 2 : undefined,
-      away_score: type === 'fim_de_jogo' ? 1 : undefined,
-      winners: type === 'fim_de_jogo'
-        ? [{ name: 'Sergio', pontos: 10 }, { name: 'João', pontos: 3 }]
-        : undefined,
-    })
-    lastResult.value = '✓ Mensagem enviada!'
+    await sendHealthcheck()
+    lastResult.value = '✓ Mensagem de teste enviada!'
     lastResultOk.value = true
   } catch (e: any) {
     lastResult.value = '✕ ' + e.message
     lastResultOk.value = false
   } finally {
-    sending.value = false
+    sendingTest.value = false
   }
 }
 
 refresh()
 
 // Poll while QR is displayed so it refreshes automatically.
-// useWAPoller uses onScopeDispose for safe cleanup on unmount.
 useWAPoller(() => {
   if (status.value?.state === 'awaiting_qr') refresh()
 })
@@ -355,27 +354,49 @@ useWAPoller(() => {
   text-decoration: underline;
 }
 
-.wa-test-btns {
+.wa-toggle-row {
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
 }
 
-.wa-btn-test {
-  flex: 1;
-  min-width: 110px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-  color: var(--text-primary);
-  font-size: 0.78rem;
+.wa-toggle-label {
+  font-size: 0.85rem;
   font-family: 'DM Sans', sans-serif;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  color: var(--text-primary);
+  flex: 1;
 }
-.wa-btn-test:hover:not(:disabled) { border-color: var(--neon); background: rgba(57,255,106,0.06); }
-.wa-btn-test:disabled { opacity: 0.5; cursor: default; }
+
+.wa-toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  border: none;
+  background: rgba(255,255,255,0.12);
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  padding: 0;
+}
+.wa-toggle.active { background: var(--neon); }
+.wa-toggle:disabled { opacity: 0.5; cursor: default; }
+
+.wa-toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+  display: block;
+}
+.wa-toggle.active .wa-toggle-knob { transform: translateX(18px); }
+
+.wa-btn-test { margin-top: 0.25rem; }
 
 .wa-result {
   font-size: 0.8rem;
@@ -414,10 +435,11 @@ useWAPoller(() => {
   align-self: flex-start;
   transition: border-color 0.15s;
 }
-.wa-btn-ghost:hover { border-color: rgba(255,255,255,0.3); }
+.wa-btn-ghost:hover:not(:disabled) { border-color: rgba(255,255,255,0.3); }
+.wa-btn-ghost:disabled { opacity: 0.5; cursor: default; }
 
 .wa-disconnect { margin-top: 0.5rem; color: #ff6b6b; border-color: rgba(255,107,107,0.2); }
-.wa-disconnect:hover { border-color: #ff6b6b; }
+.wa-disconnect:hover:not(:disabled) { border-color: #ff6b6b; }
 
 .wa-error {
   font-size: 0.78rem;

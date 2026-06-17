@@ -201,7 +201,7 @@
         </div>
 
         <!-- WhatsApp — PROTOTYPE -->
-        <WhatsAppAdminPanel :bolao-name="bolao?.name ?? ''" />
+        <WhatsAppAdminPanel />
 
         <!-- Excluir bolão -->
         <div class="danger-zone">
