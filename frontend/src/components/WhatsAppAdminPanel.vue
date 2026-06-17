@@ -34,16 +34,25 @@
         <button class="wa-btn-ghost" :disabled="loadingGroups" @click="fetchGroups">
           {{ loadingGroups ? 'Carregando…' : 'Carregar grupos' }}
         </button>
-        <div v-if="groups.length" class="wa-group-list">
-          <button
-            v-for="g in groups"
-            :key="g.jid"
-            class="wa-group-item"
-            @click="selectGroup(g.jid)"
-          >
-            {{ g.name }}
-          </button>
-        </div>
+        <template v-if="groups.length">
+          <input
+            v-model="groupSearch"
+            class="wa-search"
+            placeholder="Buscar grupo…"
+            type="search"
+          />
+          <div class="wa-group-list">
+            <button
+              v-for="g in filteredGroups"
+              :key="g.jid"
+              class="wa-group-item"
+              @click="selectGroup(g.jid)"
+            >
+              {{ g.name }}
+            </button>
+            <p v-if="!filteredGroups.length" class="wa-hint">Nenhum grupo encontrado.</p>
+          </div>
+        </template>
       </div>
 
       <!-- Group linked -->
@@ -109,6 +118,13 @@ const toggling = ref(false)
 const sendingTest = ref(false)
 const lastResult = ref('')
 const lastResultOk = ref(true)
+const groupSearch = ref('')
+
+const filteredGroups = computed(() => {
+  const q = groupSearch.value.trim().toLowerCase()
+  if (!q) return groups.value
+  return groups.value.filter(g => g.name.toLowerCase().includes(q))
+})
 
 const badgeClass = computed(() => {
   switch (status.value?.state) {
@@ -197,6 +213,7 @@ async function selectGroup(jid: string) {
 async function unlinkGroup() {
   await linkGroup('')
   groups.value = []
+  groupSearch.value = ''
   await refresh()
 }
 
@@ -294,6 +311,22 @@ useWAPoller(() => {
 }
 
 .wa-qr { width: 220px; height: 220px; }
+
+.wa-search {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.wa-search:focus { border-color: var(--neon); }
+.wa-search::placeholder { color: var(--text-muted); }
 
 .wa-group-list {
   display: flex;
