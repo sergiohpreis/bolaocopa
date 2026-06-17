@@ -113,6 +113,9 @@ func (q *Queries) ListJogos(ctx context.Context) ([]Jogo, error) {
 }
 
 const upsertJogo = `-- name: UpsertJogo :one
+WITH before AS (
+    SELECT finished FROM jogos WHERE external_id = $1
+)
 INSERT INTO jogos (external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (external_id) DO UPDATE
@@ -126,7 +129,7 @@ ON CONFLICT (external_id) DO UPDATE
         away_score     = EXCLUDED.away_score,
         finished       = EXCLUDED.finished,
         updated_at     = NOW()
-RETURNING id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at
+RETURNING id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at, (SELECT COALESCE(finished, FALSE) FROM before) AS was_finished
 `
 
 type UpsertJogoParams struct {
@@ -142,7 +145,24 @@ type UpsertJogoParams struct {
 	Finished     bool               `json:"finished"`
 }
 
-func (q *Queries) UpsertJogo(ctx context.Context, arg UpsertJogoParams) (Jogo, error) {
+type UpsertJogoRow struct {
+	ID           pgtype.UUID        `json:"id"`
+	ExternalID   string             `json:"external_id"`
+	HomeTeam     string             `json:"home_team"`
+	AwayTeam     string             `json:"away_team"`
+	HomeTeamFlag pgtype.Text        `json:"home_team_flag"`
+	AwayTeamFlag pgtype.Text        `json:"away_team_flag"`
+	StartsAt     pgtype.Timestamptz `json:"starts_at"`
+	Stage        string             `json:"stage"`
+	HomeScore    pgtype.Int4        `json:"home_score"`
+	AwayScore    pgtype.Int4        `json:"away_score"`
+	Finished     bool               `json:"finished"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	WasFinished  bool               `json:"was_finished"`
+}
+
+func (q *Queries) UpsertJogo(ctx context.Context, arg UpsertJogoParams) (UpsertJogoRow, error) {
 	row := q.db.QueryRow(ctx, upsertJogo,
 		arg.ExternalID,
 		arg.HomeTeam,
@@ -155,7 +175,7 @@ func (q *Queries) UpsertJogo(ctx context.Context, arg UpsertJogoParams) (Jogo, e
 		arg.AwayScore,
 		arg.Finished,
 	)
-	var i Jogo
+	var i UpsertJogoRow
 	err := row.Scan(
 		&i.ID,
 		&i.ExternalID,
@@ -170,6 +190,7 @@ func (q *Queries) UpsertJogo(ctx context.Context, arg UpsertJogoParams) (Jogo, e
 		&i.Finished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.WasFinished,
 	)
 	return i, err
 }

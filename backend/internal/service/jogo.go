@@ -110,11 +110,22 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) error {
 			continue
 		}
 
-		// Rastreia jogos recém-finalizados (updated_at < 8 min) para notificar após o scoring.
-		if finished && upserted.HomeScore.Valid && upserted.AwayScore.Valid {
-			if now.Sub(upserted.UpdatedAt.Time) < 8*time.Minute {
-				s.recentlyFinished = append(s.recentlyFinished, upserted)
-			}
+		// Rastreia jogos que transitaram de !finished → finished neste sync.
+		// WasFinished vem da CTE que lê o estado anterior ao upsert.
+		if upserted.Finished && !upserted.WasFinished && upserted.HomeScore.Valid && upserted.AwayScore.Valid {
+			s.recentlyFinished = append(s.recentlyFinished, repository.Jogo{
+				ID:        upserted.ID,
+				ExternalID: upserted.ExternalID,
+				HomeTeam:  upserted.HomeTeam,
+				AwayTeam:  upserted.AwayTeam,
+				HomeScore: upserted.HomeScore,
+				AwayScore: upserted.AwayScore,
+				Finished:  upserted.Finished,
+				StartsAt:  upserted.StartsAt,
+				Stage:     upserted.Stage,
+				CreatedAt: upserted.CreatedAt,
+				UpdatedAt: upserted.UpdatedAt,
+			})
 		}
 
 		// Dispatch WhatsApp notifications based on match timing.

@@ -1,4 +1,7 @@
 -- name: UpsertJogo :one
+WITH before AS (
+    SELECT finished FROM jogos WHERE external_id = $1
+)
 INSERT INTO jogos (external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (external_id) DO UPDATE
@@ -12,7 +15,7 @@ ON CONFLICT (external_id) DO UPDATE
         away_score     = EXCLUDED.away_score,
         finished       = EXCLUDED.finished,
         updated_at     = NOW()
-RETURNING *;
+RETURNING *, (SELECT COALESCE(finished, FALSE) FROM before) AS was_finished;
 
 -- name: ListJogos :many
 SELECT * FROM jogos ORDER BY starts_at ASC;
