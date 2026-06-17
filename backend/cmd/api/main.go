@@ -61,6 +61,18 @@ func main() {
 	rankingSvc.SetFeed(feedSvc)
 	taxaSvc.SetFeed(feedSvc)
 
+	// Wire WhatsApp notifier — no-op when WHATSAPP_SERVICE_URL is not set
+	var waN service.WANotifier
+	if cfg.WhatsAppServiceURL != "" && cfg.WhatsAppAPISecret != "" {
+		waN = service.NewHTTPWANotifier(cfg.WhatsAppServiceURL, cfg.WhatsAppAPISecret)
+		slog.Info("whatsapp notifier enabled", "url", cfg.WhatsAppServiceURL)
+	} else {
+		waN = service.NewNoopWANotifier()
+		slog.Info("whatsapp notifier disabled (WHATSAPP_SERVICE_URL not set)")
+	}
+	rankingSvc.SetWANotifier(waN)
+	jogoSvc.SetWANotifier(waN)
+
 	allowedOrigins := splitOrigins(cfg.AllowedOrigins)
 
 	r := chi.NewRouter()

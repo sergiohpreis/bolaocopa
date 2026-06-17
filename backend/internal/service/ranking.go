@@ -10,16 +10,21 @@ import (
 )
 
 type RankingService struct {
-	q    repository.Querier
-	feed *FeedService
+	q       repository.Querier
+	feed    *FeedService
+	waNotif WANotifier
 }
 
 func NewRankingService(q repository.Querier) *RankingService {
-	return &RankingService{q: q}
+	return &RankingService{q: q, waNotif: NewNoopWANotifier()}
 }
 
 func (s *RankingService) SetFeed(feed *FeedService) {
 	s.feed = feed
+}
+
+func (s *RankingService) SetWANotifier(n WANotifier) {
+	s.waNotif = n
 }
 
 func (s *RankingService) Get(ctx context.Context, bolaoID string) ([]repository.GetRankingRow, error) {
@@ -84,13 +89,37 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 		boloesComPalpiteNovo[bolaoIDStr] = true
 	}
 
-	if s.feed != nil {
-		for bolaoIDStr := range boloesComPalpiteNovo {
+	for bolaoIDStr := range boloesComPalpiteNovo {
+		if s.feed != nil {
 			s.feed.InsertEvento(ctx, bolaoIDStr, repository.FeedTipoResultadoApurado, nil, &jogoIDStr, map[string]any{
 				"home_score": jogo.HomeScore.Int32,
 				"away_score": jogo.AwayScore.Int32,
 			})
 		}
+
+		// Fetch palpites com nome do usuário para montar a lista de vencedores
+		bid, _ := parseUUID(bolaoIDStr)
+		rows, err := s.q.ListPalpitesByBolaoAndJogo(ctx, repository.ListPalpitesByBolaoAndJogoParams{
+			BolaoID: bid,
+			JogoID:  jogo.ID,
+		})
+		if err != nil {
+			slog.Warn("wa notify: listing palpites for winners", "bolao", bolaoIDStr, "err", err)
+			continue
+		}
+
+		var winners []WAWinner
+		for _, r := range rows {
+			if r.Pontos.Valid && r.Pontos.Int32 > 0 {
+				winners = append(winners, WAWinner{Name: r.UserName, Pontos: int(r.Pontos.Int32)})
+			}
+		}
+
+		go s.waNotif.NotifyFimDeJogo(ctx, bolaoIDStr,
+			jogo.HomeTeam, int(jogo.HomeScore.Int32),
+			jogo.AwayTeam, int(jogo.AwayScore.Int32),
+			winners,
+		)
 	}
 	return nil
 }

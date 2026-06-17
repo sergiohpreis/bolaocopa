@@ -16,12 +16,17 @@ import (
 var footballAPIClient = &http.Client{Timeout: 15 * time.Second}
 
 type JogoService struct {
-	q      repository.Querier
-	apiKey string
+	q        repository.Querier
+	apiKey   string
+	waNotif  WANotifier
 }
 
 func NewJogoService(q repository.Querier, apiKey string) *JogoService {
-	return &JogoService{q: q, apiKey: apiKey}
+	return &JogoService{q: q, apiKey: apiKey, waNotif: NewNoopWANotifier()}
+}
+
+func (s *JogoService) SetWANotifier(n WANotifier) {
+	s.waNotif = n
 }
 
 func (s *JogoService) ListAll(ctx context.Context) ([]repository.Jogo, error) {
@@ -59,6 +64,8 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) error {
 		return fmt.Errorf("decoding response: %w", err)
 	}
 
+	now := time.Now().UTC()
+
 	for _, m := range apiResp.Matches {
 		t, err := time.Parse(time.RFC3339, m.UtcDate)
 		if err != nil {
@@ -90,11 +97,34 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) error {
 
 		if _, err := s.q.UpsertJogo(ctx, params); err != nil {
 			slog.Warn("failed to upsert jogo", "external_id", params.ExternalID, "error", err)
+			continue
+		}
+
+		// Dispatch WhatsApp notifications based on match timing.
+		// The sync runs every 5 min, so each jogo falls in each window exactly once.
+		//   faltam_dez_minutos: starts_at in [now+8min, now+13min)
+		//   partida_iniciando:  starts_at in [now-3min, now+3min)
+		if !finished {
+			untilStart := t.Sub(now)
+			s.dispatchMatchNotifications(ctx, untilStart, m.HomeTeam.Name, m.AwayTeam.Name)
 		}
 	}
 
 	slog.Info("synced jogos from football-data", "count", len(apiResp.Matches))
 	return nil
+}
+
+// dispatchMatchNotifications fires WhatsApp pre-match alerts based on how far
+// the match start is from now. Called once per match per sync run.
+func (s *JogoService) dispatchMatchNotifications(ctx context.Context, untilStart time.Duration, homeTeam, awayTeam string) {
+	const bolaoID = "" // single-group prototype: bolaoID unused by httpWANotifier.post
+
+	switch {
+	case untilStart >= 8*time.Minute && untilStart < 13*time.Minute:
+		go s.waNotif.NotifyFaltamDezMinutos(ctx, bolaoID, homeTeam, awayTeam)
+	case untilStart >= -3*time.Minute && untilStart < 3*time.Minute:
+		go s.waNotif.NotifyPartidaIniciando(ctx, bolaoID, homeTeam, awayTeam)
+	}
 }
 
 type footballDataResponse struct {
