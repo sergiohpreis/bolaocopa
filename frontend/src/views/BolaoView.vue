@@ -96,6 +96,16 @@
 
       </div>
 
+      <!-- Drawer de exclusão -->
+      <ExcluirBolaoDrawer
+        :open="excluirDrawerOpen"
+        :participantes="totalParticipantes"
+        :palpites="totalPalpites"
+        :loading="excluirLoading"
+        @close="excluirDrawerOpen = false"
+        @confirm="confirmarExclusao"
+      />
+
       <!-- Tab: Admin -->
       <div v-if="isAdmin" v-show="tab === 'admin'" class="admin-tab">
 
@@ -165,6 +175,7 @@
         <div v-else class="admin-empty">Nenhum palpite aguardando aprovação.</div>
 
         <!-- Retroativos aprovados (só exibe se retroativo está habilitado) -->
+
         <div v-if="bolao?.retroativo_enabled && palpitesAprovados.length > 0" class="admin-panel" style="margin-top: 12px;">
           <div class="admin-panel-header">
             <span class="font-display" style="font-size: 0.85rem; letter-spacing: 0.1em; color: rgba(100,220,130,0.9);">RETROATIVOS APROVADOS</span>
@@ -186,6 +197,18 @@
                 <button class="action-btn reject" title="Remover palpite" @click="desaprovar(p.id)">✕</button>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Excluir bolão -->
+        <div class="danger-zone">
+          <div class="danger-zone-label font-display">ZONA DE PERIGO</div>
+          <div class="danger-zone-row">
+            <div class="danger-zone-info">
+              <span class="danger-zone-title font-display">EXCLUIR BOLÃO</span>
+              <span class="danger-zone-desc">Remove permanentemente o bolão e todos os dados associados.</span>
+            </div>
+            <button class="btn-excluir" @click="excluirDrawerOpen = true">Excluir</button>
           </div>
         </div>
 
@@ -238,12 +261,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import { getBolao, listPalpites, upsertPalpite, upsertPalpiteRetroativo, listPalpitesPendentes, aprovarPalpite, rejeitarPalpite, listPalpitesRetroativosAprovados, desaprovarPalpite, setRetroativoEnabled, getTaxaEstado, proporTaxa, votarTaxa } from '@/api/bolao'
+import { getBolao, listPalpites, upsertPalpite, upsertPalpiteRetroativo, listPalpitesPendentes, aprovarPalpite, rejeitarPalpite, listPalpitesRetroativosAprovados, desaprovarPalpite, setRetroativoEnabled, getTaxaEstado, proporTaxa, votarTaxa, deleteBolao } from '@/api/bolao'
 import { listJogos } from '@/api/jogo'
 import { useAuthStore } from '@/stores/auth'
 import { traduzTime } from '@/utils/teams'
 import JogoCard from '@/components/bolao/JogoCard.vue'
 import FeedPanel from '@/components/bolao/FeedPanel.vue'
+import ExcluirBolaoDrawer from '@/components/bolao/ExcluirBolaoDrawer.vue'
 import type { Bolao, Jogo, Palpite, PalpitePendente, TaxaEstado } from '@/types'
 
 const route = useRoute()
@@ -259,6 +283,12 @@ const palpitesAprovados = ref<PalpitePendente[]>([])
 const loadingJogos = ref(true)
 const copied = ref(false)
 const tab = ref<'jogos' | 'feed' | 'admin'>('jogos')
+
+const excluirDrawerOpen = ref(false)
+const excluirLoading = ref(false)
+
+const totalParticipantes = computed(() => bolao.value ? 1 + palpitesPendentes.value.length : 0)
+const totalPalpites = computed(() => palpites.value.length)
 
 const taxaEstado = ref<TaxaEstado>({ votos_pendentes: 0 })
 const taxaValorInput = ref('')
@@ -422,6 +452,20 @@ async function votar(aprovado: boolean) {
     }
   } finally {
     taxaLoading.value = false
+  }
+}
+
+async function confirmarExclusao() {
+  excluirLoading.value = true
+  try {
+    await deleteBolao(bolaoId)
+    toast.add({ severity: 'warn', summary: 'Bolão excluído.', life: 3000 })
+    router.push('/boloes')
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'Erro ao excluir', detail: e.message, life: 4000 })
+  } finally {
+    excluirLoading.value = false
+    excluirDrawerOpen.value = false
   }
 }
 
@@ -952,4 +996,58 @@ function formatStage(stage: string) {
   transform: translateY(-1px);
 }
 .taxa-propor-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+/* Zona de perigo */
+.danger-zone {
+  margin-top: 24px;
+  background: rgba(255,50,50,0.04);
+  border: 1px solid rgba(255,60,60,0.18);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.danger-zone-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  color: rgba(255,100,100,0.5);
+  margin-bottom: 10px;
+}
+.danger-zone-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.danger-zone-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.danger-zone-title {
+  font-size: 0.82rem;
+  letter-spacing: 0.1em;
+  color: rgba(255,100,100,0.8);
+}
+.danger-zone-desc {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.btn-excluir {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.1em;
+  background: transparent;
+  border: 1px solid rgba(255,60,60,0.4);
+  border-radius: 8px;
+  color: rgba(255,100,100,0.8);
+  padding: 7px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-excluir:hover {
+  background: rgba(255,50,50,0.08);
+  border-color: rgba(255,60,60,0.65);
+}
 </style>

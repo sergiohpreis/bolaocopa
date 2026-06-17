@@ -38,6 +38,20 @@ func (q *Queries) CreateBolao(ctx context.Context, arg CreateBolaoParams) (Bolo,
 	return i, err
 }
 
+const deleteBolao = `-- name: DeleteBolao :exec
+DELETE FROM boloes WHERE id = $1 AND admin_id = $2
+`
+
+type DeleteBolaoParams struct {
+	ID      pgtype.UUID `json:"id"`
+	AdminID pgtype.UUID `json:"admin_id"`
+}
+
+func (q *Queries) DeleteBolao(ctx context.Context, arg DeleteBolaoParams) error {
+	_, err := q.db.Exec(ctx, deleteBolao, arg.ID, arg.AdminID)
+	return err
+}
+
 const getBolaoByID = `-- name: GetBolaoByID :one
 SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada FROM boloes WHERE id = $1
 `

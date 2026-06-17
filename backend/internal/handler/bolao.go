@@ -98,6 +98,25 @@ func (h *BolaoHandler) RegenerateInvite(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, bolao)
 }
 
+// DELETE /api/v1/boloes/{id}
+func (h *BolaoHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	err := h.svc.Delete(r.Context(), chi.URLParam(r, "id"), userID)
+	if err != nil {
+		if errors.Is(err, service.ErrBolaoNotFound) {
+			apierror.NotFound(w, "bolao not found")
+			return
+		}
+		if errors.Is(err, service.ErrNotAdmin) {
+			apierror.Forbidden(w, "only the admin can delete this bolao")
+			return
+		}
+		apierror.Internal(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // PATCH /api/v1/boloes/{id}/settings
 func (h *BolaoHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())

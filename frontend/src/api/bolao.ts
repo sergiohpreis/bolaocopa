@@ -113,3 +113,7 @@ export async function getFeed(bolaoId: string): Promise<FeedEvento[]> {
   const { data } = await http.get<FeedEvento[]>(`/boloes/${bolaoId}/feed`)
   return data
 }
+
+export async function deleteBolao(id: string): Promise<void> {
+  await http.delete(`/boloes/${id}`)
+}

@@ -42,6 +42,7 @@ func RegisterRoutes(
 				r.Post("/join/{token}", bolao.Join)
 				r.Route("/{id}", func(r chi.Router) {
 					r.Get("/", bolao.Get)
+					r.Delete("/", bolao.Delete)
 					r.Post("/regenerate-invite", bolao.RegenerateInvite)
 					r.Patch("/settings", bolao.UpdateSettings)
 					r.Get("/palpites", palpite.ListMine)

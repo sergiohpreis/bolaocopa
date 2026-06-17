@@ -26,3 +26,6 @@ UPDATE boloes
 SET retroativo_enabled = $3, updated_at = NOW()
 WHERE id = $1 AND admin_id = $2
 RETURNING *;
+
+-- name: DeleteBolao :exec
+DELETE FROM boloes WHERE id = $1 AND admin_id = $2;
