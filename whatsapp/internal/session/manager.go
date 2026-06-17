@@ -145,12 +145,15 @@ func (m *Manager) handleEvent(evt interface{}) {
 		m.mu.Unlock()
 		slog.Info("WhatsApp connected")
 	case *events.Disconnected:
+		// Do NOT nil m.client here — whatsmeow reconnects automatically and
+		// fires *events.Connected again reusing the same client instance.
+		// Niling would break ListGroups/SendText during the reconnect window.
 		m.mu.Lock()
 		m.state = StateDisconnected
-		m.client = nil
 		m.mu.Unlock()
 		slog.Warn("WhatsApp disconnected")
 	case *events.LoggedOut:
+		// LoggedOut is terminal — the client will not reconnect on its own.
 		m.mu.Lock()
 		m.state = StateDisconnected
 		m.client = nil
