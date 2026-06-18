@@ -15,6 +15,9 @@ Uma partida da Copa do Mundo, com dois times, horário de início e placar final
 ## Palpite
 O placar exato que um Participante prevê para um Jogo. Pode ser criado ou alterado até o momento em que o Jogo começa. Após o início do Jogo, o Palpite é bloqueado.
 
+## Palpite Retroativo
+Palpite registrado após o início de um Jogo, permitido apenas quando o Administrador habilita a funcionalidade no Bolão. Exige aprovação explícita do Administrador antes de ser computado no Ranking. Enquanto pendente, não é visível para os outros Participantes. Se aprovado, entra no cálculo de Pontuação normalmente; se rejeitado, é descartado.
+
 ## Resultado
 O placar final de um Jogo, obtido da API externa. Usado para calcular a Pontuação de cada Palpite.
 
@@ -39,3 +42,9 @@ Estado transitório criado pelo Administrador declarando um valor de Taxa de Ent
 
 ## Feed
 Registro cronológico dos últimos 50 eventos relevantes de um Bolão, específico por Bolão. Atualizado via polling. Eventos incluem: palpite registrado (sem revelar o placar antes do Jogo começar), novo Participante entrou, Jogo começou (revela os palpites), Resultado apurado (revela pontuação de cada Participante). Não é persistido além dos 50 eventos mais recentes.
+
+## Notificação
+Mensagem enviada automaticamente pelo sistema ao Grupo Vinculado de um Bolão. Três tipos: **faltam dez minutos** (aviso para registrar Palpites antes do prazo), **partida iniciando** (apostas encerradas, boa sorte) e **fim de jogo** (placar final e quem pontuou). Disparadas pelo backend a cada ciclo de sincronização. O Administrador pode pausar ou retomar as Notificações a qualquer momento.
+
+## Grupo Vinculado
+Grupo do WhatsApp associado a um Bolão pelo Administrador. Destino de todas as Notificações daquele Bolão. Um Bolão tem no máximo um Grupo Vinculado. O vínculo é configurado pelo Administrador via painel de administração.
