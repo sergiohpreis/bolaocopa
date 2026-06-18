@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -13,7 +14,17 @@ import (
 	"github.com/sergiohpreis/bolaocopa/backend/internal/repository"
 )
 
-var footballAPIClient = &http.Client{Timeout: 15 * time.Second}
+var footballAPIClient = &http.Client{
+	Timeout: 15 * time.Second,
+	Transport: &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
+	},
+}
 
 type JogoService struct {
 	q                repository.Querier
@@ -150,8 +161,10 @@ func (s *JogoService) dispatchMatchNotifications(ctx context.Context, untilStart
 
 	switch {
 	case untilStart >= 8*time.Minute && untilStart < 13*time.Minute:
+		slog.Info("wa notify: faltam_dez_minutos", "home", homeTeam, "away", awayTeam)
 		go s.waNotif.NotifyFaltamDezMinutos(ctx, bolaoID, homeTeam, awayTeam)
 	case untilStart >= -3*time.Minute && untilStart < 3*time.Minute:
+		slog.Info("wa notify: partida_iniciando", "home", homeTeam, "away", awayTeam)
 		go s.waNotif.NotifyPartidaIniciando(ctx, bolaoID, homeTeam, awayTeam)
 	}
 }

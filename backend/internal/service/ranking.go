@@ -72,6 +72,7 @@ func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []rep
 				}
 			}
 		}
+		slog.Info("wa notify: fim_de_jogo", "home", jogo.HomeTeam, "away", jogo.AwayTeam, "winners", len(winners))
 		go s.waNotif.NotifyFimDeJogo(ctx, "",
 			jogo.HomeTeam, int(jogo.HomeScore.Int32),
 			jogo.AwayTeam, int(jogo.AwayScore.Int32),

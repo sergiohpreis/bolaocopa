@@ -6,6 +6,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/skip2/go-qrcode"
@@ -45,10 +48,30 @@ type Manager struct {
 }
 
 func New(storePath string) *Manager {
-	return &Manager{
+	m := &Manager{
 		state:     StateDisconnected,
 		enabled:   true,
 		storePath: storePath,
+	}
+	m.linkedGroup = m.loadLinkedGroup()
+	return m
+}
+
+func (m *Manager) linkedGroupFile() string {
+	return filepath.Join(m.storePath, "linked_group")
+}
+
+func (m *Manager) loadLinkedGroup() string {
+	b, err := os.ReadFile(m.linkedGroupFile())
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(b))
+}
+
+func (m *Manager) saveLinkedGroup(jid string) {
+	if err := os.WriteFile(m.linkedGroupFile(), []byte(jid), 0600); err != nil {
+		slog.Error("persist linked group", "err", err)
 	}
 }
 
@@ -186,6 +209,7 @@ func (m *Manager) LinkGroup(jid string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.linkedGroup = jid
+	m.saveLinkedGroup(jid)
 }
 
 func (m *Manager) Enabled() bool {
