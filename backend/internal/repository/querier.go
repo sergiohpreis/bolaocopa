@@ -24,6 +24,7 @@ type Querier interface {
 	DeletePalpite(ctx context.Context, arg DeletePalpiteParams) error
 	GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error)
 	GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error)
+	GetBolaoWAGroup(ctx context.Context, id pgtype.UUID) (pgtype.Text, error)
 	GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
 	GetMeuVoto(ctx context.Context, arg GetMeuVotoParams) (bool, error)
 	GetPalpiteByID(ctx context.Context, arg GetPalpiteByIDParams) (Palpite, error)
@@ -54,6 +55,7 @@ type Querier interface {
 	// pgx returns pgx.ErrNoRows, which the service maps to ErrJaVotou.
 	// Do NOT change to DO UPDATE without updating the service layer.
 	RegistrarVoto(ctx context.Context, arg RegistrarVotoParams) (TaxaEntradaVoto, error)
+	SetBolaoWAGroup(ctx context.Context, arg SetBolaoWAGroupParams) (Bolo, error)
 	SetRetroativoEnabled(ctx context.Context, arg SetRetroativoEnabledParams) (Bolo, error)
 	UpdatePalpitePontos(ctx context.Context, arg UpdatePalpitePontosParams) error
 	UpsertJogo(ctx context.Context, arg UpsertJogoParams) (UpsertJogoRow, error)

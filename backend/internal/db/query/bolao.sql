@@ -29,3 +29,9 @@ RETURNING *;
 
 -- name: DeleteBolao :exec
 DELETE FROM boloes WHERE id = $1 AND admin_id = $2;
+
+-- name: SetBolaoWAGroup :one
+UPDATE boloes SET wa_group_jid = $2, updated_at = NOW() WHERE id = $1 RETURNING *;
+
+-- name: GetBolaoWAGroup :one
+SELECT wa_group_jid FROM boloes WHERE id = $1;

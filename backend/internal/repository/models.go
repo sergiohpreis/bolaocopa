@@ -67,6 +67,7 @@ type Bolo struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 	RetroativoEnabled bool               `json:"retroativo_enabled"`
 	TaxaEntrada       pgtype.Numeric     `json:"taxa_entrada"`
+	WaGroupJid        pgtype.Text        `json:"wa_group_jid"`
 }
 
 type FeedEvento struct {

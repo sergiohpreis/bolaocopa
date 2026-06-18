@@ -1,0 +1,1 @@
+ALTER TABLE boloes DROP COLUMN IF EXISTS wa_group_jid;
