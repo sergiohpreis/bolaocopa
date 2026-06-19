@@ -183,6 +183,44 @@ func (q *Queries) ListBoloesByUser(ctx context.Context, userID pgtype.UUID) ([]B
 	return items, nil
 }
 
+const listBoloesByWAGroup = `-- name: ListBoloesByWAGroup :many
+SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid
+FROM boloes
+WHERE wa_group_jid IS NOT NULL
+  AND wa_group_jid != ''
+ORDER BY created_at
+`
+
+func (q *Queries) ListBoloesByWAGroup(ctx context.Context) ([]Bolo, error) {
+	rows, err := q.db.Query(ctx, listBoloesByWAGroup)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Bolo
+	for rows.Next() {
+		var i Bolo
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.AdminID,
+			&i.InviteToken,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RetroativoEnabled,
+			&i.TaxaEntrada,
+			&i.WaGroupJid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const regenerateInviteToken = `-- name: RegenerateInviteToken :one
 UPDATE boloes
 SET invite_token = encode(gen_random_bytes(32), 'hex'), updated_at = NOW()

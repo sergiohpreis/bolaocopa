@@ -44,3 +44,10 @@ WHERE p.jogo_id = $1
   AND b.wa_group_jid IS NOT NULL
   AND b.wa_group_jid != ''
 ORDER BY b.created_at;
+
+-- name: ListBoloesByWAGroup :many
+SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid
+FROM boloes
+WHERE wa_group_jid IS NOT NULL
+  AND wa_group_jid != ''
+ORDER BY created_at;

@@ -41,6 +41,7 @@ type Querier interface {
 	JoinBolao(ctx context.Context, arg JoinBolaoParams) (Participante, error)
 	ListBoloesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]Bolo, error)
 	ListBoloesByUser(ctx context.Context, userID pgtype.UUID) ([]Bolo, error)
+	ListBoloesByWAGroup(ctx context.Context) ([]Bolo, error)
 	ListFeedByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListFeedByBolaoRow, error)
 	ListFinishedJobsWithoutScores(ctx context.Context) ([]Jogo, error)
 	ListJogos(ctx context.Context) ([]Jogo, error)

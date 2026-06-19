@@ -139,7 +139,7 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 		//   partida_iniciando:  untilStart in [-2min, +2min)
 		if !finished {
 			untilStart := t.Sub(now)
-			s.dispatchMatchNotifications(context.Background(), upserted.ID, untilStart, m.HomeTeam.Name, m.AwayTeam.Name)
+			s.dispatchMatchNotifications(context.Background(), untilStart, m.HomeTeam.Name, m.AwayTeam.Name)
 		}
 	}
 
@@ -154,7 +154,7 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 //	partida_iniciando:  [-2min, +2min)
 //
 // Notifications are sent only to groups of bolões that have palpites on this jogo.
-func (s *JogoService) dispatchMatchNotifications(ctx context.Context, jogoID pgtype.UUID, untilStart time.Duration, homeTeam, awayTeam string) {
+func (s *JogoService) dispatchMatchNotifications(ctx context.Context, untilStart time.Duration, homeTeam, awayTeam string) {
 	var notifyFn func(ctx context.Context, groupJID, homeTeam, awayTeam string)
 
 	switch {
@@ -168,9 +168,9 @@ func (s *JogoService) dispatchMatchNotifications(ctx context.Context, jogoID pgt
 		return
 	}
 
-	boloes, err := s.q.ListBoloesByJogo(ctx, jogoID)
+	boloes, err := s.q.ListBoloesByWAGroup(ctx)
 	if err != nil {
-		slog.Warn("wa notify: listing boloes for jogo", "err", err)
+		slog.Warn("wa notify: listing boloes with wa group", "err", err)
 		return
 	}
 	for _, b := range boloes {
