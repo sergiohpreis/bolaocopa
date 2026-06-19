@@ -260,7 +260,7 @@ async function doHealthcheck() {
   sendingTest.value = true
   lastResult.value = ''
   try {
-    await sendHealthcheck()
+    await sendHealthcheck(props.linkedGroup ?? undefined)
     lastResult.value = '✓ Mensagem de teste enviada!'
     lastResultOk.value = true
   } catch (e: unknown) {

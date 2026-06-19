@@ -30,6 +30,6 @@ export async function toggleNotifications(enabled: boolean): Promise<void> {
   await http.post('/whatsapp/toggle', { enabled })
 }
 
-export async function sendHealthcheck(): Promise<void> {
-  await http.post('/whatsapp/healthcheck')
+export async function sendHealthcheck(targetJid?: string): Promise<void> {
+  await http.post('/whatsapp/healthcheck', targetJid ? { target_jid: targetJid } : {})
 }
