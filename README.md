@@ -13,11 +13,26 @@ Bolão de palpites para a Copa do Mundo. Crie um grupo, compartilhe o link de co
 ### Lista de bolões
 ![Lista de bolões](docs/assets/boloes.png)
 
-### Jogos e palpites
+### Jogos e palpites (com banner ao vivo)
 ![Jogos](docs/assets/jogos.png)
+
+### Ranking
+![Ranking](docs/assets/ranking.png)
 
 ### Feed de atividade
 ![Feed](docs/assets/feed.png)
+
+### Painel admin — taxa, retroativos e WhatsApp
+![Admin](docs/assets/admin.png)
+
+### Palpite retroativo aguardando aprovação
+![Palpite retroativo](docs/assets/palpite-retroativo.png)
+
+### Notificações WhatsApp
+![WhatsApp config](docs/assets/whatsapp-config.png)
+
+### Excluir bolão
+![Excluir bolão](docs/assets/excluir-bolao.png)
 
 ### Como funciona
 ![Como funciona — pontuação e prazo](docs/assets/como-funciona-1.png)
@@ -33,17 +48,56 @@ Bolão de palpites para a Copa do Mundo. Crie um grupo, compartilhe o link de co
 
 **Infra** — PostgreSQL 16 · Docker Compose · Nginx · Cloudflare Tunnel
 
+**WhatsApp** — whatsmeow (serviço standalone chamado pelo backend)
+
+---
+
+## Arquitetura
+
+```mermaid
+graph TD
+    subgraph Frontend
+        VUE[Vue 3 + Pinia]
+    end
+
+    subgraph Backend
+        CHI[Chi Router]
+        SVC[Services]
+        SQLC[sqlc / pgx]
+        CRON[Cron — sync jogos + disparo notificações]
+    end
+
+    subgraph Infra
+        PG[(PostgreSQL 16)]
+        WA[whatsmeow service]
+        FD[football-data.org API]
+    end
+
+    VUE -- HTTP / JWT --> CHI
+    CHI --> SVC
+    SVC --> SQLC
+    SQLC --> PG
+    CRON --> FD
+    CRON --> WA
+    WA -- WhatsApp --> GRP[Grupo WhatsApp]
+```
+
 ---
 
 ## Funcionalidades
 
-- **Bolões** — crie quantos quiser, cada um com link de convite único
+- **Bolões** — crie quantos quiser, cada um com link de convite único; o criador é o Administrador
+- **Auth** — Google OAuth ou e-mail/senha
 - **Palpites** — registre e altere até o apito inicial; bloqueio automático por horário (UTC)
-- **Ranking** — classificação em tempo real com pontuação acumulada
+- **Palpite Retroativo** — quando habilitado pelo Administrador, permite registrar palpites após o início do Jogo; ficam pendentes até aprovação explícita do Admin e ocultos dos demais Participantes até lá
+- **Ranking** — classificação em tempo real com pontuação acumulada por Bolão
 - **Feed** — últimos 50 eventos do bolão com polling de 15s; palpites ficam ocultos até o jogo começar
 - **Palpites dos outros** — expanda qualquer jogo já iniciado para ver o que cada participante apostou
+- **Jogos ao vivo** — banner fixo no topo da aba Jogos; filtros separados para Próximos e Encerrados
+- **Taxa de Entrada** — Administrador propõe um valor; exige aprovação unânime dos Participantes presentes; imutável após definida; sistema não processa pagamentos
+- **Excluir bolão** — Administrador pode excluir o bolão com confirmação via drawer
+- **Notificações WhatsApp** — vincula um Grupo WhatsApp ao Bolão; três tipos de notificação automática: aviso 10 min antes, partida iniciando, e fim de jogo com pontuações; Administrador pode pausar/retomar
 - **Sincronização de jogos** — partidas importadas da [football-data.org](https://www.football-data.org/) via cron
-- **Auth** — Google OAuth ou e-mail/senha
 
 ---
 
