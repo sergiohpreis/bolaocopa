@@ -200,6 +200,15 @@
           </div>
         </div>
 
+        <!-- WhatsApp — PROTOTYPE -->
+        <WhatsAppAdminPanel
+          :bolao-id="bolaoId"
+          :linked-group="bolao?.wa_group_jid"
+          :notifications-enabled="bolao?.wa_notifications_enabled ?? true"
+          @group-changed="reloadBolao"
+          @notifications-changed="reloadBolao"
+        />
+
         <!-- Excluir bolão -->
         <div class="danger-zone">
           <div class="danger-zone-label font-display">ZONA DE PERIGO</div>
@@ -268,6 +277,7 @@ import { traduzTime } from '@/utils/teams'
 import JogoCard from '@/components/bolao/JogoCard.vue'
 import FeedPanel from '@/components/bolao/FeedPanel.vue'
 import ExcluirBolaoDrawer from '@/components/bolao/ExcluirBolaoDrawer.vue'
+import WhatsAppAdminPanel from '@/components/WhatsAppAdminPanel.vue' // PROTOTYPE
 import type { Bolao, Jogo, Palpite, PalpitePendente, TaxaEstado } from '@/types'
 
 const route = useRoute()
@@ -387,6 +397,14 @@ async function rejeitar(palpiteId: string) {
     toast.add({ severity: 'success', summary: 'Palpite rejeitado.', life: 2000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: 'Erro', detail: e.message, life: 3000 })
+  }
+}
+
+async function reloadBolao() {
+  try {
+    bolao.value = await getBolao(bolaoId)
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'Erro ao recarregar bolão', detail: e.message, life: 3000 })
   }
 }
 

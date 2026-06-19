@@ -59,14 +59,16 @@ func (ns NullFeedTipo) Value() (driver.Value, error) {
 }
 
 type Bolo struct {
-	ID                pgtype.UUID        `json:"id"`
-	Name              string             `json:"name"`
-	AdminID           pgtype.UUID        `json:"admin_id"`
-	InviteToken       string             `json:"invite_token"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
-	RetroativoEnabled bool               `json:"retroativo_enabled"`
-	TaxaEntrada       pgtype.Numeric     `json:"taxa_entrada"`
+	ID                     pgtype.UUID        `json:"id"`
+	Name                   string             `json:"name"`
+	AdminID                pgtype.UUID        `json:"admin_id"`
+	InviteToken            string             `json:"invite_token"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	RetroativoEnabled      bool               `json:"retroativo_enabled"`
+	TaxaEntrada            pgtype.Numeric     `json:"taxa_entrada"`
+	WaGroupJid             pgtype.Text        `json:"wa_group_jid"`
+	WaNotificationsEnabled bool               `json:"wa_notifications_enabled"`
 }
 
 type FeedEvento struct {

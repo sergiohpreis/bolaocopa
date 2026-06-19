@@ -15,6 +15,7 @@ func RegisterRoutes(
 	ranking *RankingHandler,
 	feed *FeedHandler,
 	taxa *TaxaHandler,
+	waProxy *WAProxyHandler,
 	authMw func(http.Handler) http.Handler,
 ) {
 	r.Get("/health", healthHandler)
@@ -45,6 +46,8 @@ func RegisterRoutes(
 					r.Delete("/", bolao.Delete)
 					r.Post("/regenerate-invite", bolao.RegenerateInvite)
 					r.Patch("/settings", bolao.UpdateSettings)
+					r.Put("/whatsapp-group", bolao.SetWAGroup)
+					r.Put("/whatsapp-notifications", bolao.SetWANotificationsEnabled)
 					r.Get("/palpites", palpite.ListMine)
 					r.Get("/palpites/pendentes", palpite.ListPendentes)
 					r.Get("/palpites/retroativos", palpite.ListRetroativosAprovados)
@@ -63,6 +66,18 @@ func RegisterRoutes(
 					r.Post("/taxa/votar", taxa.Votar)
 				})
 			})
+
+			if waProxy != nil {
+				r.Route("/whatsapp", func(r chi.Router) {
+					r.Get("/status", waProxy.Status)
+					r.Get("/qr", waProxy.QR)
+					r.Post("/connect", waProxy.Connect)
+					r.Delete("/connect", waProxy.Disconnect)
+					r.Get("/groups", waProxy.Groups)
+					r.Post("/toggle", waProxy.Toggle)
+					r.Post("/healthcheck", waProxy.Healthcheck)
+				})
+			}
 		})
 	})
 }

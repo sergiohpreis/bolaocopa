@@ -10,16 +10,21 @@ import (
 )
 
 type RankingService struct {
-	q    repository.Querier
-	feed *FeedService
+	q       repository.Querier
+	feed    *FeedService
+	waNotif WANotifier
 }
 
 func NewRankingService(q repository.Querier) *RankingService {
-	return &RankingService{q: q}
+	return &RankingService{q: q, waNotif: NewNoopWANotifier()}
 }
 
 func (s *RankingService) SetFeed(feed *FeedService) {
 	s.feed = feed
+}
+
+func (s *RankingService) SetWANotifier(n WANotifier) {
+	s.waNotif = n
 }
 
 func (s *RankingService) Get(ctx context.Context, bolaoID string) ([]repository.GetRankingRow, error) {
@@ -35,6 +40,47 @@ func (s *RankingService) Get(ctx context.Context, bolaoID string) ([]repository.
 		items = []repository.GetRankingRow{}
 	}
 	return items, nil
+}
+
+// NotifyRecentlyFinished dispara a notificação de fim de jogo para jogos recém-finalizados.
+// Envia uma notificação por bolão que tem wa_group_jid configurado e palpites no jogo,
+// com os winners daquele bolão específico.
+func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []repository.Jogo) {
+	boloes, err := s.q.ListBoloesByWAGroup(ctx)
+	if err != nil {
+		slog.Warn("wa notify: listing boloes with wa group", "err", err)
+		return
+	}
+
+	for _, jogo := range jogos {
+		for _, bolao := range boloes {
+			groupJID := bolao.WaGroupJid.String
+
+			rows, err := s.q.ListPalpitesByBolaoAndJogo(ctx, repository.ListPalpitesByBolaoAndJogoParams{
+				BolaoID: bolao.ID,
+				JogoID:  jogo.ID,
+			})
+			if err != nil {
+				slog.Warn("wa notify: listing palpites per bolao", "bolao", uuidToString(bolao.ID), "jogo", jogo.ExternalID, "err", err)
+				continue
+			}
+
+			var winners []WAWinner
+			for _, r := range rows {
+				if r.Pontos.Valid && r.Pontos.Int32 > 0 {
+					winners = append(winners, WAWinner{Name: r.UserName, Pontos: int(r.Pontos.Int32)})
+				}
+			}
+
+			slog.Info("wa notify: fim_de_jogo", "home", jogo.HomeTeam, "away", jogo.AwayTeam, "bolao", uuidToString(bolao.ID), "winners", len(winners))
+			jid := groupJID
+			go s.waNotif.NotifyFimDeJogo(context.Background(), jid,
+				jogo.HomeTeam, int(jogo.HomeScore.Int32),
+				jogo.AwayTeam, int(jogo.AwayScore.Int32),
+				winners,
+			)
+		}
+	}
 }
 
 // ComputeScoresForFinishedJogos fetches all finished jogos with known scores
@@ -84,14 +130,15 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 		boloesComPalpiteNovo[bolaoIDStr] = true
 	}
 
-	if s.feed != nil {
-		for bolaoIDStr := range boloesComPalpiteNovo {
+	for bolaoIDStr := range boloesComPalpiteNovo {
+		if s.feed != nil {
 			s.feed.InsertEvento(ctx, bolaoIDStr, repository.FeedTipoResultadoApurado, nil, &jogoIDStr, map[string]any{
 				"home_score": jogo.HomeScore.Int32,
 				"away_score": jogo.AwayScore.Int32,
 			})
 		}
 	}
+
 	return nil
 }
 

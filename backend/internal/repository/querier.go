@@ -24,6 +24,7 @@ type Querier interface {
 	DeletePalpite(ctx context.Context, arg DeletePalpiteParams) error
 	GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error)
 	GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error)
+	GetBolaoWAGroup(ctx context.Context, id pgtype.UUID) (pgtype.Text, error)
 	GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
 	GetMeuVoto(ctx context.Context, arg GetMeuVotoParams) (bool, error)
 	GetPalpiteByID(ctx context.Context, arg GetPalpiteByIDParams) (Palpite, error)
@@ -38,7 +39,9 @@ type Querier interface {
 	// Returns true if the user was a participant at or before proposta.created_at.
 	IsParticipanteElegivel(ctx context.Context, arg IsParticipanteElegivelParams) (bool, error)
 	JoinBolao(ctx context.Context, arg JoinBolaoParams) (Participante, error)
+	ListBoloesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]Bolo, error)
 	ListBoloesByUser(ctx context.Context, userID pgtype.UUID) ([]Bolo, error)
+	ListBoloesByWAGroup(ctx context.Context) ([]Bolo, error)
 	ListFeedByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListFeedByBolaoRow, error)
 	ListFinishedJobsWithoutScores(ctx context.Context) ([]Jogo, error)
 	ListJogos(ctx context.Context) ([]Jogo, error)
@@ -54,9 +57,11 @@ type Querier interface {
 	// pgx returns pgx.ErrNoRows, which the service maps to ErrJaVotou.
 	// Do NOT change to DO UPDATE without updating the service layer.
 	RegistrarVoto(ctx context.Context, arg RegistrarVotoParams) (TaxaEntradaVoto, error)
+	SetBolaoWAGroup(ctx context.Context, arg SetBolaoWAGroupParams) (Bolo, error)
+	SetBolaoWANotificationsEnabled(ctx context.Context, arg SetBolaoWANotificationsEnabledParams) (Bolo, error)
 	SetRetroativoEnabled(ctx context.Context, arg SetRetroativoEnabledParams) (Bolo, error)
 	UpdatePalpitePontos(ctx context.Context, arg UpdatePalpitePontosParams) error
-	UpsertJogo(ctx context.Context, arg UpsertJogoParams) (Jogo, error)
+	UpsertJogo(ctx context.Context, arg UpsertJogoParams) (UpsertJogoRow, error)
 	UpsertPalpite(ctx context.Context, arg UpsertPalpiteParams) (Palpite, error)
 	// When the conflict row has status='aprovado', the WHERE clause causes Postgres to skip
 	// the DO UPDATE, and RETURNING emits 0 rows. pgx surfaces this as pgx.ErrNoRows,

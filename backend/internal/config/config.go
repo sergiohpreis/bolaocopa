@@ -16,6 +16,9 @@ type Config struct {
 	GoogleClientSecret string
 	GoogleRedirectURL  string
 	FootballDataAPIKey string
+	// WhatsApp notification service (optional — empty = disabled)
+	WhatsAppServiceURL string
+	WhatsAppAPISecret  string
 }
 
 func Load() Config {
@@ -49,6 +52,8 @@ func Load() Config {
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GoogleRedirectURL:  os.Getenv("GOOGLE_REDIRECT_URL"),
 		FootballDataAPIKey: os.Getenv("FOOTBALL_DATA_API_KEY"),
+		WhatsAppServiceURL: os.Getenv("WHATSAPP_SERVICE_URL"),
+		WhatsAppAPISecret:  os.Getenv("WHATSAPP_API_SECRET"),
 	}
 
 	if cfg.DatabaseURL == "" {

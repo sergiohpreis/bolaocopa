@@ -61,6 +61,23 @@ func main() {
 	rankingSvc.SetFeed(feedSvc)
 	taxaSvc.SetFeed(feedSvc)
 
+	// Wire WhatsApp notifier — no-op when WHATSAPP_SERVICE_URL is not set
+	var waN service.WANotifier
+	if cfg.WhatsAppServiceURL != "" && cfg.WhatsAppAPISecret != "" {
+		waN = service.NewHTTPWANotifier(cfg.WhatsAppServiceURL, cfg.WhatsAppAPISecret)
+		slog.Info("whatsapp notifier enabled", "url", cfg.WhatsAppServiceURL)
+	} else {
+		waN = service.NewNoopWANotifier()
+		slog.Info("whatsapp notifier disabled (WHATSAPP_SERVICE_URL not set)")
+	}
+	rankingSvc.SetWANotifier(waN)
+	jogoSvc.SetWANotifier(waN)
+
+	var waProxy *handler.WAProxyHandler
+	if cfg.WhatsAppServiceURL != "" && cfg.WhatsAppAPISecret != "" {
+		waProxy = handler.NewWAProxyHandler(cfg.WhatsAppServiceURL, cfg.WhatsAppAPISecret)
+	}
+
 	allowedOrigins := splitOrigins(cfg.AllowedOrigins)
 
 	r := chi.NewRouter()
@@ -81,6 +98,7 @@ func main() {
 		handler.NewRankingHandler(rankingSvc, bolaoSvc),
 		handler.NewFeedHandler(feedSvc),
 		handler.NewTaxaHandler(taxaSvc),
+		waProxy,
 		authMw,
 	)
 
@@ -101,14 +119,21 @@ func main() {
 		doSync := func() {
 			syncCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
-			if err := jogoSvc.SyncFromAPI(syncCtx); err != nil {
+			recentlyFinished, err := jogoSvc.SyncFromAPI(syncCtx)
+			if err != nil {
 				slog.Warn("background sync failed", "error", err)
-			} else if err := rankingSvc.ComputeScoresForFinishedJogos(syncCtx); err != nil {
+				return
+			}
+			if err := rankingSvc.ComputeScoresForFinishedJogos(syncCtx); err != nil {
 				slog.Warn("background scoring failed", "error", err)
+				return
+			}
+			if len(recentlyFinished) > 0 {
+				rankingSvc.NotifyRecentlyFinished(context.Background(), recentlyFinished)
 			}
 		}
 		doSync()
-		ticker := time.NewTicker(5 * time.Minute)
+		ticker := time.NewTicker(1 * time.Minute)
 		defer ticker.Stop()
 		for {
 			select {
