@@ -36,10 +36,6 @@ export async function listGroups(): Promise<WAGroup[]> {
   return data
 }
 
-export async function linkGroup(jid: string): Promise<void> {
-  await wa.post('/link', { jid })
-}
-
 export async function toggleNotifications(enabled: boolean): Promise<void> {
   await wa.post('/toggle', { enabled })
 }

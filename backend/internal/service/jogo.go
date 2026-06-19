@@ -153,7 +153,8 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 //	faltam_dez_minutos: [7min, 12min)
 //	partida_iniciando:  [-2min, +2min)
 //
-// Notifications are sent only to groups of bolões that have palpites on this jogo.
+// Notifications are sent to all bolões that have a wa_group_jid configured,
+// regardless of whether they have palpites on this jogo.
 func (s *JogoService) dispatchMatchNotifications(ctx context.Context, untilStart time.Duration, homeTeam, awayTeam string) {
 	var notifyFn func(ctx context.Context, groupJID, homeTeam, awayTeam string)
 

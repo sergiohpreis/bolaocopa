@@ -62,6 +62,7 @@ func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []rep
 			})
 			if err != nil {
 				slog.Warn("wa notify: listing palpites per bolao", "bolao", uuidToString(bolao.ID), "jogo", jogo.ExternalID, "err", err)
+				continue
 			}
 
 			var winners []WAWinner

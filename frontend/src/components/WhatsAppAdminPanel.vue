@@ -100,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   getStatus, getQR, connect, disconnect, listGroups,
   toggleNotifications, sendHealthcheck,
@@ -114,7 +114,7 @@ const props = defineProps<{
   linkedGroup: string | null | undefined
 }>()
 
-const emit = defineEmits<{ (e: 'group-changed'): void }>()
+const emit = defineEmits<{ 'group-changed': [] }>()
 
 const status = ref<WAStatus | null>(null)
 const qrImage = ref<string>('')
@@ -127,6 +127,7 @@ const sendingTest = ref(false)
 const lastResult = ref('')
 const lastResultOk = ref(true)
 const groupSearch = ref('')
+const refreshing = ref(false)
 
 const filteredGroups = computed(() => {
   const q = groupSearch.value.trim().toLowerCase()
@@ -156,17 +157,24 @@ const groupName = computed(() => {
 })
 
 async function refresh() {
+  if (refreshing.value) return
+  refreshing.value = true
   try {
     error.value = ''
     status.value = await getStatus()
-    if (status.value.state === 'awaiting_qr' && status.value.has_qr) {
+    if (status.value.state === 'awaiting_qr' && status.value.has_qr && !qrImage.value) {
       qrImage.value = await getQR()
+    }
+    if (status.value.state !== 'awaiting_qr') {
+      qrImage.value = ''
     }
     if (status.value.state === 'connected' && !props.linkedGroup && !groups.value.length && !loadingGroups.value) {
       await fetchGroups()
     }
   } catch {
     error.value = 'Serviço WhatsApp indisponível. Suba o container com --profile whatsapp.'
+  } finally {
+    refreshing.value = false
   }
 }
 
@@ -263,7 +271,7 @@ async function doHealthcheck() {
   }
 }
 
-refresh()
+onMounted(refresh)
 
 // Poll to keep status up-to-date (QR refresh, connection state changes).
 useWAPoller(refresh)
