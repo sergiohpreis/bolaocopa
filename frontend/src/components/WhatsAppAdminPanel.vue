@@ -168,7 +168,7 @@ async function refresh() {
     if (status.value.state !== 'awaiting_qr') {
       qrImage.value = ''
     }
-    if (status.value.state === 'connected' && !props.linkedGroup && !groups.value.length && !loadingGroups.value) {
+    if (status.value.state === 'connected' && !groups.value.length && !loadingGroups.value) {
       await fetchGroups()
     }
   } catch {
