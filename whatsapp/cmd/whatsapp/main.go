@@ -128,9 +128,16 @@ func main() {
 			respond(w, map[string]bool{"enabled": body.Enabled})
 		})
 
-		// POST /healthcheck — send a test message to the linked group
+		// POST /healthcheck — send a test message; target_jid in body overrides global linked group
 		r.Post("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
-			jid := mgr.LinkedGroup()
+			var body struct {
+				TargetJID string `json:"target_jid"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			jid := body.TargetJID
+			if jid == "" {
+				jid = mgr.LinkedGroup()
+			}
 			if jid == "" {
 				http.Error(w, "no linked group", http.StatusConflict)
 				return
