@@ -230,6 +230,45 @@
         </div>
 
         <div v-else>
+          <!-- Banner: Ao Vivo -->
+          <div v-if="jogosAoVivo.length > 0" class="live-banner animate-fade-up">
+            <div class="live-banner-header">
+              <span class="live-pulse-dot" />
+              <span class="font-display live-banner-label">AO VIVO</span>
+            </div>
+            <div class="flex flex-col gap-2">
+              <JogoCard
+                v-for="jogo in jogosAoVivo"
+                :key="jogo.id"
+                :jogo="jogo"
+                :palpite="palpiteMap[jogo.id]"
+                :bolao-id="bolaoId"
+                :retroativo-enabled="bolao?.retroativo_enabled ?? false"
+                @save="(h, a) => savePalpite(jogo.id, h, a)"
+                @save-retroativo="(h, a) => savePalpiteRetroativo(jogo.id, h, a)"
+              />
+            </div>
+          </div>
+
+          <!-- Filtros: Próximos / Encerrados -->
+          <div class="jogo-filter-bar">
+            <button
+              class="jogo-filter-btn"
+              :class="{ active: jogoFilter === 'proximos' }"
+              @click="jogoFilter = 'proximos'"
+            >
+              PRÓXIMOS
+            </button>
+            <button
+              class="jogo-filter-btn"
+              :class="{ active: jogoFilter === 'encerrados' }"
+              @click="jogoFilter = 'encerrados'"
+            >
+              ENCERRADOS
+            </button>
+          </div>
+
+          <!-- Lista filtrada por fase -->
           <div v-for="(group, stage) in jogosByStage" :key="stage" class="stage-group">
             <div class="stage-header">
               <div class="stage-line" />
@@ -250,7 +289,7 @@
             </div>
           </div>
 
-          <div v-if="Object.keys(jogosByStage).length === 0" class="empty-state">
+          <div v-if="Object.keys(jogosByStage).length === 0 && jogosAoVivo.length === 0" class="empty-state">
             <span style="font-size: 2.5rem;">⚽</span>
             <p class="font-display" style="color: var(--text-muted); font-size: 1.3rem; letter-spacing: 0.06em; margin-top: 12px;">JOGOS NÃO CARREGADOS</p>
           </div>
@@ -319,13 +358,27 @@ const palpiteMap = computed(() => {
   return map
 })
 
-const jogosByStage = computed(() => {
+const jogoFilter = ref<'proximos' | 'encerrados'>('proximos')
+
+const jogosAoVivo = computed(() =>
+  jogos.value.filter(j => !j.finished && new Date(j.starts_at) <= new Date())
+)
+
+function groupByStage(list: Jogo[]): Record<string, Jogo[]> {
   const groups: Record<string, Jogo[]> = {}
-  for (const j of jogos.value) {
+  for (const j of list) {
     if (!groups[j.stage]) groups[j.stage] = []
     groups[j.stage].push(j)
   }
   return groups
+}
+
+const jogosByStage = computed(() => {
+  const base = jogos.value.filter(j => !jogosAoVivo.value.includes(j))
+  if (jogoFilter.value === 'proximos') {
+    return groupByStage(base.filter(j => !j.finished))
+  }
+  return groupByStage(base.filter(j => j.finished))
 })
 
 onMounted(async () => {
@@ -341,6 +394,8 @@ onMounted(async () => {
     palpites.value = p
     taxaEstado.value = taxa
     jaVotei.value = taxa.meu_voto != null
+    const hasProximos = j.some(jg => !jg.finished && new Date(jg.starts_at) > new Date())
+    if (!hasProximos) jogoFilter.value = 'encerrados'
     if (b.admin_id === authStore.currentUserId) {
       ;[palpitesPendentes.value, palpitesAprovados.value] = await Promise.all([
         listPalpitesPendentes(bolaoId),
@@ -1067,5 +1122,81 @@ function formatStage(stage: string) {
 .btn-excluir:hover {
   background: rgba(255,50,50,0.08);
   border-color: rgba(255,60,60,0.65);
+}
+
+/* Banner AO VIVO */
+.live-banner {
+  border-left: 3px solid rgba(255, 80, 80, 0.7);
+  background: rgba(255, 50, 50, 0.04);
+  border-radius: 0 12px 12px 0;
+  padding: 12px 0 12px 14px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.live-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,80,80,0.04) 0%, transparent 60%);
+  pointer-events: none;
+  animation: scan-live 3s linear infinite;
+}
+@keyframes scan-live {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(200%); }
+}
+.live-banner-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+.live-pulse-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff8080;
+  box-shadow: 0 0 6px rgba(255,80,80,0.6);
+  animation: pulse-live-dot 1.4s ease-in-out infinite;
+}
+@keyframes pulse-live-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.75); }
+}
+.live-banner-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  color: #ff8080;
+}
+
+/* Filtros de jogos */
+.jogo-filter-bar {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(57,255,106,0.1);
+}
+.jogo-filter-btn {
+  padding: 8px 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  position: relative;
+  bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.jogo-filter-btn.active {
+  color: var(--neon);
+  border-bottom-color: var(--neon);
+}
+.jogo-filter-btn:not(.active):hover {
+  color: rgba(255,255,255,0.55);
 }
 </style>
