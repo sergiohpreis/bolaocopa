@@ -133,7 +133,7 @@ func main() {
 			}
 		}
 		doSync()
-		ticker := time.NewTicker(5 * time.Minute)
+		ticker := time.NewTicker(1 * time.Minute)
 		defer ticker.Stop()
 		for {
 			select {
