@@ -40,6 +40,15 @@ Valor informativo que cada Participante deve pagar para participar do Bolão. Pr
 ## Proposta de Taxa
 Estado transitório criado pelo Administrador declarando um valor de Taxa de Entrada. Exige aprovação de todos os Participantes presentes no momento da proposta. Cancelada imediatamente se qualquer Participante votar não. Participantes que entrarem no Bolão após a criação da proposta não precisam votar.
 
+## Jogo Ao Vivo
+Um Jogo que já começou (`starts_at` no passado) mas ainda não teve o Resultado apurado (`finished = false`). Pode haver mais de um Jogo Ao Vivo simultaneamente (ex: última rodada da fase de grupos). Na aba Jogos do Bolão, Jogos Ao Vivo são exibidos em destaque fixo no topo, fora dos filtros de navegação.
+
+## Jogo Encerrado
+Um Jogo com `finished = true` — Resultado já apurado e Pontuações calculadas.
+
+## Jogo Próximo
+Um Jogo que ainda não começou (`starts_at` no futuro, `finished = false`). Inclui jogos com e sem Palpite registrado.
+
 ## Feed
 Registro cronológico dos últimos 50 eventos relevantes de um Bolão, específico por Bolão. Atualizado via polling. Eventos incluem: palpite registrado (sem revelar o placar antes do Jogo começar), novo Participante entrou, Jogo começou (revela os palpites), Resultado apurado (revela pontuação de cada Participante). Não é persistido além dos 50 eventos mais recentes.
 
