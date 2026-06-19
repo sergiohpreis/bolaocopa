@@ -46,18 +46,15 @@ func (s *RankingService) Get(ctx context.Context, bolaoID string) ([]repository.
 // Envia uma notificação por bolão que tem wa_group_jid configurado e palpites no jogo,
 // com os winners daquele bolão específico.
 func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []repository.Jogo) {
-	for _, jogo := range jogos {
-		boloes, err := s.q.ListBoloesByJogo(ctx, jogo.ID)
-		if err != nil {
-			slog.Warn("wa notify: listing boloes for jogo", "jogo", jogo.ExternalID, "err", err)
-			continue
-		}
+	boloes, err := s.q.ListBoloesByWAGroup(ctx)
+	if err != nil {
+		slog.Warn("wa notify: listing boloes with wa group", "err", err)
+		return
+	}
 
+	for _, jogo := range jogos {
 		for _, bolao := range boloes {
 			groupJID := bolao.WaGroupJid.String
-			if groupJID == "" {
-				continue
-			}
 
 			rows, err := s.q.ListPalpitesByBolaoAndJogo(ctx, repository.ListPalpitesByBolaoAndJogoParams{
 				BolaoID: bolao.ID,
@@ -65,7 +62,6 @@ func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []rep
 			})
 			if err != nil {
 				slog.Warn("wa notify: listing palpites per bolao", "bolao", uuidToString(bolao.ID), "jogo", jogo.ExternalID, "err", err)
-				continue
 			}
 
 			var winners []WAWinner
