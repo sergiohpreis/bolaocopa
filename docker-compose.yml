@@ -45,8 +45,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        VITE_WHATSAPP_API_SECRET: ${WHATSAPP_API_SECRET}
     container_name: bolaocopa-frontend
     restart: unless-stopped
     networks:
