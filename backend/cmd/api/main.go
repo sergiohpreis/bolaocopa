@@ -113,15 +113,15 @@ func main() {
 		doSync := func() {
 			syncCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
-			if err := jogoSvc.SyncFromAPI(syncCtx); err != nil {
+			recentlyFinished, err := jogoSvc.SyncFromAPI(syncCtx)
+			if err != nil {
 				slog.Warn("background sync failed", "error", err)
 				return
 			}
-			recentlyFinished := jogoSvc.DrainRecentlyFinished()
 			if err := rankingSvc.ComputeScoresForFinishedJogos(syncCtx); err != nil {
 				slog.Warn("background scoring failed", "error", err)
+				return
 			}
-			// Notifica fim de jogo com context próprio — syncCtx pode já ter expirado.
 			if len(recentlyFinished) > 0 {
 				rankingSvc.NotifyRecentlyFinished(context.Background(), recentlyFinished)
 			}

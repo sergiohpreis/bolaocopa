@@ -27,10 +27,9 @@ var footballAPIClient = &http.Client{
 }
 
 type JogoService struct {
-	q                repository.Querier
-	apiKey           string
-	waNotif          WANotifier
-	recentlyFinished []repository.Jogo // jogos que ficaram FINISHED neste sync run
+	q       repository.Querier
+	apiKey  string
+	waNotif WANotifier
 }
 
 func NewJogoService(q repository.Querier, apiKey string) *JogoService {
@@ -39,14 +38,6 @@ func NewJogoService(q repository.Querier, apiKey string) *JogoService {
 
 func (s *JogoService) SetWANotifier(n WANotifier) {
 	s.waNotif = n
-}
-
-// DrainRecentlyFinished retorna e limpa os jogos que ficaram FINISHED no último sync.
-// Chamado pelo scoring após calcular pontos, para disparar a notificação com winners.
-func (s *JogoService) DrainRecentlyFinished() []repository.Jogo {
-	jogos := s.recentlyFinished
-	s.recentlyFinished = nil
-	return jogos
 }
 
 func (s *JogoService) ListAll(ctx context.Context) ([]repository.Jogo, error) {
@@ -61,30 +52,33 @@ func (s *JogoService) ListAll(ctx context.Context) ([]repository.Jogo, error) {
 }
 
 // SyncFromAPI fetches matches from football-data.org and upserts them.
-func (s *JogoService) SyncFromAPI(ctx context.Context) error {
+// Returns jogos that transitioned to FINISHED in this sync run (for fim-de-jogo notifications).
+func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.football-data.org/v4/competitions/WC/matches", nil)
 	if err != nil {
-		return fmt.Errorf("building request: %w", err)
+		return nil, fmt.Errorf("building request: %w", err)
 	}
 	req.Header.Set("X-Auth-Token", s.apiKey)
 
 	resp, err := footballAPIClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("calling football-data api: %w", err)
+		return nil, fmt.Errorf("calling football-data api: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("reading response: %w", err)
+		return nil, fmt.Errorf("reading response: %w", err)
 	}
 
 	var apiResp footballDataResponse
 	if err := json.Unmarshal(body, &apiResp); err != nil {
-		return fmt.Errorf("decoding response: %w", err)
+		return nil, fmt.Errorf("decoding response: %w", err)
 	}
 
 	now := time.Now().UTC()
+
+	var recentlyFinished []repository.Jogo
 
 	for _, m := range apiResp.Matches {
 		t, err := time.Parse(time.RFC3339, m.UtcDate)
@@ -121,51 +115,68 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) error {
 			continue
 		}
 
-		// Rastreia jogos que transitaram de !finished → finished neste sync.
-		// WasFinished vem da CTE que lê o estado anterior ao upsert.
+		// Track jogos that transitioned !finished → finished in this sync.
+		// WasFinished comes from the CTE that reads the pre-upsert state.
 		if upserted.Finished && !upserted.WasFinished && upserted.HomeScore.Valid && upserted.AwayScore.Valid {
-			s.recentlyFinished = append(s.recentlyFinished, repository.Jogo{
-				ID:        upserted.ID,
+			recentlyFinished = append(recentlyFinished, repository.Jogo{
+				ID:         upserted.ID,
 				ExternalID: upserted.ExternalID,
-				HomeTeam:  upserted.HomeTeam,
-				AwayTeam:  upserted.AwayTeam,
-				HomeScore: upserted.HomeScore,
-				AwayScore: upserted.AwayScore,
-				Finished:  upserted.Finished,
-				StartsAt:  upserted.StartsAt,
-				Stage:     upserted.Stage,
-				CreatedAt: upserted.CreatedAt,
-				UpdatedAt: upserted.UpdatedAt,
+				HomeTeam:   upserted.HomeTeam,
+				AwayTeam:   upserted.AwayTeam,
+				HomeScore:  upserted.HomeScore,
+				AwayScore:  upserted.AwayScore,
+				Finished:   upserted.Finished,
+				StartsAt:   upserted.StartsAt,
+				Stage:      upserted.Stage,
+				CreatedAt:  upserted.CreatedAt,
+				UpdatedAt:  upserted.UpdatedAt,
 			})
 		}
 
-		// Dispatch WhatsApp notifications based on match timing.
-		// The sync runs every 5 min, so each jogo falls in each window exactly once.
-		//   faltam_dez_minutos: starts_at in [now+8min, now+13min)
-		//   partida_iniciando:  starts_at in [now-3min, now+3min)
-		// Uses a detached context so the notification POST survives syncCtx expiry.
+		// Dispatch WhatsApp pre-match notifications based on time until start.
+		// Windows are 5 min wide (matching the sync interval) with 1 min buffer:
+		//   faltam_dez_minutos: untilStart in [7min, 12min)
+		//   partida_iniciando:  untilStart in [-2min, +2min)
 		if !finished {
 			untilStart := t.Sub(now)
-			s.dispatchMatchNotifications(context.Background(), untilStart, m.HomeTeam.Name, m.AwayTeam.Name)
+			s.dispatchMatchNotifications(context.Background(), upserted.ID, untilStart, m.HomeTeam.Name, m.AwayTeam.Name)
 		}
 	}
 
 	slog.Info("synced jogos from football-data", "count", len(apiResp.Matches))
-	return nil
+	return recentlyFinished, nil
 }
 
 // dispatchMatchNotifications fires WhatsApp pre-match alerts based on how far
-// the match start is from now. Called once per match per sync run.
-func (s *JogoService) dispatchMatchNotifications(ctx context.Context, untilStart time.Duration, homeTeam, awayTeam string) {
-	const bolaoID = "" // single-group prototype: bolaoID unused by httpWANotifier.post
+// the match start is from now. Windows are 5 min wide with 1 min slack:
+//
+//	faltam_dez_minutos: [7min, 12min)
+//	partida_iniciando:  [-2min, +2min)
+//
+// Notifications are sent only to groups of bolões that have palpites on this jogo.
+func (s *JogoService) dispatchMatchNotifications(ctx context.Context, jogoID pgtype.UUID, untilStart time.Duration, homeTeam, awayTeam string) {
+	var notifyFn func(ctx context.Context, groupJID, homeTeam, awayTeam string)
 
 	switch {
-	case untilStart >= 8*time.Minute && untilStart < 13*time.Minute:
+	case untilStart >= 7*time.Minute && untilStart < 12*time.Minute:
 		slog.Info("wa notify: faltam_dez_minutos", "home", homeTeam, "away", awayTeam)
-		go s.waNotif.NotifyFaltamDezMinutos(ctx, bolaoID, homeTeam, awayTeam)
-	case untilStart >= -3*time.Minute && untilStart < 3*time.Minute:
+		notifyFn = s.waNotif.NotifyFaltamDezMinutos
+	case untilStart >= -2*time.Minute && untilStart < 2*time.Minute:
 		slog.Info("wa notify: partida_iniciando", "home", homeTeam, "away", awayTeam)
-		go s.waNotif.NotifyPartidaIniciando(ctx, bolaoID, homeTeam, awayTeam)
+		notifyFn = s.waNotif.NotifyPartidaIniciando
+	default:
+		return
+	}
+
+	boloes, err := s.q.ListBoloesByJogo(ctx, jogoID)
+	if err != nil {
+		slog.Warn("wa notify: listing boloes for jogo", "err", err)
+		return
+	}
+	for _, b := range boloes {
+		jid := b.WaGroupJid.String
+		ht, at := homeTeam, awayTeam
+		go notifyFn(ctx, jid, ht, at)
 	}
 }
 

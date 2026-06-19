@@ -11,12 +11,12 @@ import (
 )
 
 // WANotifier sends bolão notifications to a WhatsApp group.
-// The implementation calls the standalone whatsapp service over the internal network.
-// It is a no-op when WANotifierURL is empty (whatsapp profile not running).
+// groupJID is the WhatsApp group JID to send to; empty string falls back to
+// the whatsapp service's globally linked group (useful for healthchecks/tests).
 type WANotifier interface {
-	NotifyFimDeJogo(ctx context.Context, bolaoID, homeTeam string, homeScore int, awayTeam string, awayScore int, winners []WAWinner)
-	NotifyFaltamDezMinutos(ctx context.Context, bolaoID, homeTeam, awayTeam string)
-	NotifyPartidaIniciando(ctx context.Context, bolaoID, homeTeam, awayTeam string)
+	NotifyFimDeJogo(ctx context.Context, groupJID, homeTeam string, homeScore int, awayTeam string, awayScore int, winners []WAWinner)
+	NotifyFaltamDezMinutos(ctx context.Context, groupJID, homeTeam, awayTeam string)
+	NotifyPartidaIniciando(ctx context.Context, groupJID, homeTeam, awayTeam string)
 }
 
 type WAWinner struct {
@@ -49,12 +49,12 @@ func (n *noopWANotifier) NotifyFimDeJogo(_ context.Context, _, _ string, _ int, 
 func (n *noopWANotifier) NotifyFaltamDezMinutos(_ context.Context, _, _, _ string) {}
 func (n *noopWANotifier) NotifyPartidaIniciando(_ context.Context, _, _, _ string) {}
 
-func (n *httpWANotifier) NotifyFimDeJogo(ctx context.Context, bolaoID, homeTeam string, homeScore int, awayTeam string, awayScore int, winners []WAWinner) {
+func (n *httpWANotifier) NotifyFimDeJogo(ctx context.Context, groupJID, homeTeam string, homeScore int, awayTeam string, awayScore int, winners []WAWinner) {
 	ws := make([]map[string]any, len(winners))
 	for i, w := range winners {
 		ws[i] = map[string]any{"name": w.Name, "pontos": w.Pontos}
 	}
-	n.post(ctx, bolaoID, map[string]any{
+	n.post(ctx, groupJID, map[string]any{
 		"type":       "fim_de_jogo",
 		"home_team":  homeTeam,
 		"home_score": homeScore,
@@ -64,26 +64,29 @@ func (n *httpWANotifier) NotifyFimDeJogo(ctx context.Context, bolaoID, homeTeam 
 	})
 }
 
-func (n *httpWANotifier) NotifyFaltamDezMinutos(ctx context.Context, bolaoID, homeTeam, awayTeam string) {
-	n.post(ctx, bolaoID, map[string]any{
+func (n *httpWANotifier) NotifyFaltamDezMinutos(ctx context.Context, groupJID, homeTeam, awayTeam string) {
+	n.post(ctx, groupJID, map[string]any{
 		"type":      "faltam_dez_minutos",
 		"home_team": homeTeam,
 		"away_team": awayTeam,
 	})
 }
 
-func (n *httpWANotifier) NotifyPartidaIniciando(ctx context.Context, bolaoID, homeTeam, awayTeam string) {
-	n.post(ctx, bolaoID, map[string]any{
+func (n *httpWANotifier) NotifyPartidaIniciando(ctx context.Context, groupJID, homeTeam, awayTeam string) {
+	n.post(ctx, groupJID, map[string]any{
 		"type":      "partida_iniciando",
 		"home_team": homeTeam,
 		"away_team": awayTeam,
 	})
 }
 
-// post sends the notification fire-and-forget with a short timeout.
-// The bolaoID is passed so the whatsapp service can resolve the linked group
-// (currently a single global group — multi-bolão support is a future step).
-func (n *httpWANotifier) post(ctx context.Context, _ string, payload map[string]any) {
+// post sends the notification with the given groupJID as target_jid.
+// The whatsapp service falls back to its globally linked group when target_jid is empty.
+func (n *httpWANotifier) post(ctx context.Context, groupJID string, payload map[string]any) {
+	if groupJID != "" {
+		payload["target_jid"] = groupJID
+	}
+
 	b, err := json.Marshal(payload)
 	if err != nil {
 		slog.Error("wa notifier: marshal payload", "err", err)

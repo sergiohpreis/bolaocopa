@@ -20,12 +20,24 @@ func New(sender Sender) *Notifier {
 	return &Notifier{sender: sender}
 }
 
-// PartidaAcabou envia resultado da partida e quem pontuou.
-// winners: lista de nomes com pontos.
-func (n *Notifier) PartidaAcabou(ctx context.Context, homeTeam string, homeScore int, awayTeam string, awayScore int, winners []Winner) error {
+// resolveJID returns targetJID if non-empty, otherwise falls back to the global linked group.
+func (n *Notifier) resolveJID(targetJID string) (string, error) {
+	if targetJID != "" {
+		return targetJID, nil
+	}
 	jid := n.sender.LinkedGroup()
 	if jid == "" {
-		return fmt.Errorf("nenhum grupo vinculado")
+		return "", fmt.Errorf("nenhum grupo vinculado")
+	}
+	return jid, nil
+}
+
+// PartidaAcabou envia resultado da partida e quem pontuou.
+// targetJID: JID do grupo destino; se vazio usa o grupo global vinculado.
+func (n *Notifier) PartidaAcabou(ctx context.Context, targetJID, homeTeam string, homeScore int, awayTeam string, awayScore int, winners []Winner) error {
+	jid, err := n.resolveJID(targetJID)
+	if err != nil {
+		return err
 	}
 
 	linha := homeTeam + " " + strconv.Itoa(homeScore) + " x " + strconv.Itoa(awayScore) + " " + awayTeam
@@ -44,10 +56,11 @@ func (n *Notifier) PartidaAcabou(ctx context.Context, homeTeam string, homeScore
 }
 
 // FaltamDezMinutos envia lembrete antes da partida.
-func (n *Notifier) FaltamDezMinutos(ctx context.Context, homeTeam, awayTeam string) error {
-	jid := n.sender.LinkedGroup()
-	if jid == "" {
-		return fmt.Errorf("nenhum grupo vinculado")
+// targetJID: JID do grupo destino; se vazio usa o grupo global vinculado.
+func (n *Notifier) FaltamDezMinutos(ctx context.Context, targetJID, homeTeam, awayTeam string) error {
+	jid, err := n.resolveJID(targetJID)
+	if err != nil {
+		return err
 	}
 
 	msg := fmt.Sprintf(
@@ -59,10 +72,11 @@ func (n *Notifier) FaltamDezMinutos(ctx context.Context, homeTeam, awayTeam stri
 }
 
 // PartidaIniciando envia notificação de encerramento de apostas.
-func (n *Notifier) PartidaIniciando(ctx context.Context, homeTeam, awayTeam string) error {
-	jid := n.sender.LinkedGroup()
-	if jid == "" {
-		return fmt.Errorf("nenhum grupo vinculado")
+// targetJID: JID do grupo destino; se vazio usa o grupo global vinculado.
+func (n *Notifier) PartidaIniciando(ctx context.Context, targetJID, homeTeam, awayTeam string) error {
+	jid, err := n.resolveJID(targetJID)
+	if err != nil {
+		return err
 	}
 
 	msg := fmt.Sprintf(

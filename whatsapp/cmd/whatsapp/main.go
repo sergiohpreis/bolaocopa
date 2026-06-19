@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 
 	"github.com/sergiohpreis/bolaocopa/whatsapp/internal/notifier"
 	"github.com/sergiohpreis/bolaocopa/whatsapp/internal/session"
@@ -37,9 +37,10 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Auto-connect on startup (reconnects if session exists)
+	// Auto-connect on startup using a detached context — session establishment is
+	// long-lived and must not be cancelled by SIGTERM arriving during connect.
 	go func() {
-		if err := mgr.Connect(ctx); err != nil {
+		if err := mgr.Connect(context.Background()); err != nil {
 			slog.Error("initial connect failed", "err", err)
 		}
 	}()
@@ -47,16 +48,12 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET", "POST", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"*"},
-	}))
 
-	// Simple secret header auth — prototype only
+	// Constant-time secret comparison prevents timing side-channels.
 	auth := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("X-API-Secret") != apiSecret {
+			provided := r.Header.Get("X-API-Secret")
+			if subtle.ConstantTimeCompare([]byte(provided), []byte(apiSecret)) != 1 {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
@@ -167,6 +164,7 @@ func main() {
 			}
 			var body struct {
 				Type      string `json:"type"`
+				TargetJID string `json:"target_jid"`
 				HomeTeam  string `json:"home_team"`
 				AwayTeam  string `json:"away_team"`
 				HomeScore int    `json:"home_score"`
@@ -188,11 +186,11 @@ func main() {
 				for i, w := range body.Winners {
 					ws[i] = notifier.Winner{Name: w.Name, Pontos: w.Pontos}
 				}
-				sendErr = ntfr.PartidaAcabou(r.Context(), body.HomeTeam, body.HomeScore, body.AwayTeam, body.AwayScore, ws)
+				sendErr = ntfr.PartidaAcabou(r.Context(), body.TargetJID, body.HomeTeam, body.HomeScore, body.AwayTeam, body.AwayScore, ws)
 			case "faltam_dez_minutos":
-				sendErr = ntfr.FaltamDezMinutos(r.Context(), body.HomeTeam, body.AwayTeam)
+				sendErr = ntfr.FaltamDezMinutos(r.Context(), body.TargetJID, body.HomeTeam, body.AwayTeam)
 			case "partida_iniciando":
-				sendErr = ntfr.PartidaIniciando(r.Context(), body.HomeTeam, body.AwayTeam)
+				sendErr = ntfr.PartidaIniciando(r.Context(), body.TargetJID, body.HomeTeam, body.AwayTeam)
 			default:
 				http.Error(w, "unknown notification type", http.StatusBadRequest)
 				return

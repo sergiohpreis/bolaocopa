@@ -27,7 +27,7 @@ func (h *JogoHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // POST /api/v1/jogos/sync — admin-only in production (protected by auth middleware)
 func (h *JogoHandler) Sync(w http.ResponseWriter, r *http.Request) {
-	if err := h.svc.SyncFromAPI(r.Context()); err != nil {
+	if _, err := h.svc.SyncFromAPI(r.Context()); err != nil {
 		apierror.Internal(w, err)
 		return
 	}

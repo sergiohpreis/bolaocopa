@@ -50,15 +50,19 @@ type Manager struct {
 func New(storePath string) *Manager {
 	m := &Manager{
 		state:     StateDisconnected,
-		enabled:   true,
 		storePath: storePath,
 	}
 	m.linkedGroup = m.loadLinkedGroup()
+	m.enabled = m.loadEnabled()
 	return m
 }
 
 func (m *Manager) linkedGroupFile() string {
 	return filepath.Join(m.storePath, "linked_group")
+}
+
+func (m *Manager) enabledFile() string {
+	return filepath.Join(m.storePath, "enabled")
 }
 
 func (m *Manager) loadLinkedGroup() string {
@@ -69,10 +73,34 @@ func (m *Manager) loadLinkedGroup() string {
 	return strings.TrimSpace(string(b))
 }
 
+func (m *Manager) loadEnabled() bool {
+	b, err := os.ReadFile(m.enabledFile())
+	if err != nil {
+		return true // default: enabled
+	}
+	return strings.TrimSpace(string(b)) == "true"
+}
+
 func (m *Manager) saveLinkedGroup(jid string) {
 	if err := os.WriteFile(m.linkedGroupFile(), []byte(jid), 0600); err != nil {
 		slog.Error("persist linked group", "err", err)
 	}
+}
+
+func (m *Manager) saveEnabled(v bool) {
+	val := "false"
+	if v {
+		val = "true"
+	}
+	if err := os.WriteFile(m.enabledFile(), []byte(val), 0600); err != nil {
+		slog.Error("persist enabled flag", "err", err)
+	}
+}
+
+func (m *Manager) resetToDisconnected() {
+	m.mu.Lock()
+	m.state = StateDisconnected
+	m.mu.Unlock()
 }
 
 func (m *Manager) Connect(ctx context.Context) error {
@@ -96,11 +124,13 @@ func (m *Manager) Connect(ctx context.Context) error {
 
 	container, err := sqlstore.New(ctx, "sqlite3", "file:"+m.storePath+"/whatsapp.db?_foreign_keys=on", waLog.Noop)
 	if err != nil {
+		m.resetToDisconnected()
 		return fmt.Errorf("sqlstore: %w", err)
 	}
 
 	device, err := container.GetFirstDevice(ctx)
 	if err != nil {
+		m.resetToDisconnected()
 		return fmt.Errorf("get device: %w", err)
 	}
 
@@ -111,9 +141,11 @@ func (m *Manager) Connect(ctx context.Context) error {
 		// New device: need QR
 		qrChan, err := client.GetQRChannel(ctx)
 		if err != nil {
+			m.resetToDisconnected()
 			return fmt.Errorf("get qr channel: %w", err)
 		}
 		if err := client.Connect(); err != nil {
+			m.resetToDisconnected()
 			return fmt.Errorf("connect: %w", err)
 		}
 
@@ -149,6 +181,7 @@ func (m *Manager) Connect(ctx context.Context) error {
 	} else {
 		// Reconnect existing session
 		if err := client.Connect(); err != nil {
+			m.resetToDisconnected()
 			return fmt.Errorf("reconnect: %w", err)
 		}
 		m.mu.Lock()
@@ -207,8 +240,8 @@ func (m *Manager) LinkedGroup() string {
 
 func (m *Manager) LinkGroup(jid string) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	m.linkedGroup = jid
+	m.mu.Unlock()
 	m.saveLinkedGroup(jid)
 }
 
@@ -220,8 +253,9 @@ func (m *Manager) Enabled() bool {
 
 func (m *Manager) SetEnabled(v bool) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	m.enabled = v
+	m.mu.Unlock()
+	m.saveEnabled(v)
 }
 
 func (m *Manager) ListGroups(ctx context.Context) ([]Group, error) {
