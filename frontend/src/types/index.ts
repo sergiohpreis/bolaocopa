@@ -18,6 +18,7 @@ export interface Bolao {
   invite_token: string
   retroativo_enabled: boolean
   taxa_entrada?: string | null
+  wa_group_jid?: string | null
   created_at: string
   updated_at: string
 }
@@ -110,7 +111,7 @@ export interface RankingEntry {
 // PROTOTYPE — WhatsApp integration types
 export interface WAStatus {
   state: 'disconnected' | 'connecting' | 'awaiting_qr' | 'connected'
-  linked_group: string
+  linked_group: string | null
   has_qr: boolean
   enabled: boolean
 }
@@ -120,11 +121,20 @@ export interface WAGroup {
   name: string
 }
 
-export interface WANotifyPayload {
-  type: 'fim_de_jogo' | 'faltam_dez_minutos' | 'partida_iniciando'
+interface WANotifyBase {
   home_team: string
   away_team: string
-  home_score?: number
-  away_score?: number
+}
+
+interface WANotifyFimDeJogo extends WANotifyBase {
+  type: 'fim_de_jogo'
+  home_score: number
+  away_score: number
   winners?: { name: string; pontos: number }[]
 }
+
+interface WANotifyMatchEvent extends WANotifyBase {
+  type: 'faltam_dez_minutos' | 'partida_iniciando'
+}
+
+export type WANotifyPayload = WANotifyFimDeJogo | WANotifyMatchEvent

@@ -35,3 +35,12 @@ UPDATE boloes SET wa_group_jid = $2, updated_at = NOW() WHERE id = $1 RETURNING 
 
 -- name: GetBolaoWAGroup :one
 SELECT wa_group_jid FROM boloes WHERE id = $1;
+
+-- name: ListBoloesByJogo :many
+SELECT DISTINCT b.id, b.name, b.admin_id, b.invite_token, b.created_at, b.updated_at, b.retroativo_enabled, b.taxa_entrada, b.wa_group_jid
+FROM boloes b
+JOIN palpites p ON p.bolao_id = b.id
+WHERE p.jogo_id = $1
+  AND b.wa_group_jid IS NOT NULL
+  AND b.wa_group_jid != ''
+ORDER BY b.created_at;

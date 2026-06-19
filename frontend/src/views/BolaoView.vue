@@ -201,7 +201,11 @@
         </div>
 
         <!-- WhatsApp — PROTOTYPE -->
-        <WhatsAppAdminPanel />
+        <WhatsAppAdminPanel
+          :bolao-id="bolaoId"
+          :linked-group="bolao?.wa_group_jid"
+          @group-changed="reloadBolao"
+        />
 
         <!-- Excluir bolão -->
         <div class="danger-zone">
@@ -391,6 +395,14 @@ async function rejeitar(palpiteId: string) {
     toast.add({ severity: 'success', summary: 'Palpite rejeitado.', life: 2000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: 'Erro', detail: e.message, life: 3000 })
+  }
+}
+
+async function reloadBolao() {
+  try {
+    bolao.value = await getBolao(bolaoId)
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'Erro ao recarregar bolão', detail: e.message, life: 3000 })
   }
 }
 

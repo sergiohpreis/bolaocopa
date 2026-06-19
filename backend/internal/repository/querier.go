@@ -39,6 +39,7 @@ type Querier interface {
 	// Returns true if the user was a participant at or before proposta.created_at.
 	IsParticipanteElegivel(ctx context.Context, arg IsParticipanteElegivelParams) (bool, error)
 	JoinBolao(ctx context.Context, arg JoinBolaoParams) (Participante, error)
+	ListBoloesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]Bolo, error)
 	ListBoloesByUser(ctx context.Context, userID pgtype.UUID) ([]Bolo, error)
 	ListFeedByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListFeedByBolaoRow, error)
 	ListFinishedJobsWithoutScores(ctx context.Context) ([]Jogo, error)

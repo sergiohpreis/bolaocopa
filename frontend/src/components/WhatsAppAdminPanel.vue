@@ -29,7 +29,7 @@
     <template v-else-if="status?.state === 'connected'">
 
       <!-- Group linking -->
-      <div v-if="!status.linked_group" class="wa-section">
+      <div v-if="!props.linkedGroup" class="wa-section">
         <p class="wa-hint">Selecione o grupo do WhatsApp onde as notificações serão enviadas.</p>
         <button class="wa-btn-ghost" :disabled="loadingGroups" @click="fetchGroups">
           {{ loadingGroups ? 'Carregando…' : 'Carregar grupos' }}
@@ -59,7 +59,7 @@
       <div v-else class="wa-section">
         <div class="wa-linked-group">
           <span class="wa-linked-label">GRUPO VINCULADO</span>
-          <span class="wa-linked-name">{{ groupName || status.linked_group }}</span>
+          <span class="wa-linked-name">{{ groupName || props.linkedGroup }}</span>
           <button class="wa-btn-link" @click="unlinkGroup">trocar</button>
         </div>
 
@@ -102,11 +102,19 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import {
-  getStatus, getQR, connect, disconnect, listGroups, linkGroup,
+  getStatus, getQR, connect, disconnect, listGroups,
   toggleNotifications, sendHealthcheck,
 } from '@/api/whatsapp'
+import { setWAGroup } from '@/api/bolao'
 import type { WAStatus, WAGroup } from '@/types'
 import { useWAPoller } from '@/composables/useWAPoller'
+
+const props = defineProps<{
+  bolaoId: string
+  linkedGroup: string | null | undefined
+}>()
+
+const emit = defineEmits<{ (e: 'group-changed'): void }>()
 
 const status = ref<WAStatus | null>(null)
 const qrImage = ref<string>('')
@@ -143,8 +151,8 @@ const badgeLabel = computed(() => {
 })
 
 const groupName = computed(() => {
-  if (!status.value?.linked_group) return ''
-  return groups.value.find(g => g.jid === status.value!.linked_group)?.name ?? ''
+  if (!props.linkedGroup) return ''
+  return groups.value.find(g => g.jid === props.linkedGroup)?.name ?? props.linkedGroup
 })
 
 async function refresh() {
@@ -154,7 +162,7 @@ async function refresh() {
     if (status.value.state === 'awaiting_qr' && status.value.has_qr) {
       qrImage.value = await getQR()
     }
-    if (status.value.state === 'connected' && !groups.value.length && !loadingGroups.value) {
+    if (status.value.state === 'connected' && !props.linkedGroup && !groups.value.length && !loadingGroups.value) {
       await fetchGroups()
     }
   } catch {
@@ -168,8 +176,8 @@ async function startConnect() {
   try {
     await connect()
     await refresh()
-  } catch (e: any) {
-    error.value = e.message
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : String(e)
   } finally {
     connecting.value = false
   }
@@ -179,8 +187,8 @@ async function cancelConnect() {
   try {
     await disconnect()
     await refresh()
-  } catch (e: any) {
-    error.value = e.message
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : String(e)
   }
 }
 
@@ -188,8 +196,8 @@ async function doDisconnect() {
   try {
     await disconnect()
     await refresh()
-  } catch (e: any) {
-    error.value = e.message
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : String(e)
   }
 }
 
@@ -198,23 +206,33 @@ async function fetchGroups() {
   error.value = ''
   try {
     groups.value = await listGroups()
-  } catch (e: any) {
-    error.value = e.message
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : String(e)
   } finally {
     loadingGroups.value = false
   }
 }
 
 async function selectGroup(jid: string) {
-  await linkGroup(jid)
-  await refresh()
+  try {
+    await setWAGroup(props.bolaoId, jid)
+    emit('group-changed')
+    await refresh()
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : String(e)
+  }
 }
 
 async function unlinkGroup() {
-  await linkGroup('')
-  groups.value = []
-  groupSearch.value = ''
-  await refresh()
+  try {
+    await setWAGroup(props.bolaoId, '')
+    groups.value = []
+    groupSearch.value = ''
+    emit('group-changed')
+    await refresh()
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : String(e)
+  }
 }
 
 async function doToggle() {
@@ -223,8 +241,8 @@ async function doToggle() {
   try {
     await toggleNotifications(!status.value.enabled)
     await refresh()
-  } catch (e: any) {
-    error.value = e.message
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : String(e)
   } finally {
     toggling.value = false
   }
@@ -237,8 +255,8 @@ async function doHealthcheck() {
     await sendHealthcheck()
     lastResult.value = '✓ Mensagem de teste enviada!'
     lastResultOk.value = true
-  } catch (e: any) {
-    lastResult.value = '✕ ' + e.message
+  } catch (e: unknown) {
+    lastResult.value = '✕ ' + (e instanceof Error ? e.message : String(e))
     lastResultOk.value = false
   } finally {
     sendingTest.value = false
@@ -247,10 +265,8 @@ async function doHealthcheck() {
 
 refresh()
 
-// Poll while QR is displayed so it refreshes automatically.
-useWAPoller(() => {
-  if (status.value?.state === 'awaiting_qr') refresh()
-})
+// Poll to keep status up-to-date (QR refresh, connection state changes).
+useWAPoller(refresh)
 </script>
 
 <style scoped>

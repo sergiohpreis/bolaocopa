@@ -45,6 +45,7 @@ func RegisterRoutes(
 					r.Delete("/", bolao.Delete)
 					r.Post("/regenerate-invite", bolao.RegenerateInvite)
 					r.Patch("/settings", bolao.UpdateSettings)
+					r.Put("/whatsapp-group", bolao.SetWAGroup)
 					r.Get("/palpites", palpite.ListMine)
 					r.Get("/palpites/pendentes", palpite.ListPendentes)
 					r.Get("/palpites/retroativos", palpite.ListRetroativosAprovados)

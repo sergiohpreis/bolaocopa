@@ -106,6 +106,46 @@ func (q *Queries) GetBolaoWAGroup(ctx context.Context, id pgtype.UUID) (pgtype.T
 	return wa_group_jid, err
 }
 
+const listBoloesByJogo = `-- name: ListBoloesByJogo :many
+SELECT DISTINCT b.id, b.name, b.admin_id, b.invite_token, b.created_at, b.updated_at, b.retroativo_enabled, b.taxa_entrada, b.wa_group_jid
+FROM boloes b
+JOIN palpites p ON p.bolao_id = b.id
+WHERE p.jogo_id = $1
+  AND b.wa_group_jid IS NOT NULL
+  AND b.wa_group_jid != ''
+ORDER BY b.created_at
+`
+
+func (q *Queries) ListBoloesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]Bolo, error) {
+	rows, err := q.db.Query(ctx, listBoloesByJogo, jogoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Bolo
+	for rows.Next() {
+		var i Bolo
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.AdminID,
+			&i.InviteToken,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RetroativoEnabled,
+			&i.TaxaEntrada,
+			&i.WaGroupJid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listBoloesByUser = `-- name: ListBoloesByUser :many
 SELECT b.id, b.name, b.admin_id, b.invite_token, b.created_at, b.updated_at, b.retroativo_enabled, b.taxa_entrada, b.wa_group_jid FROM boloes b
 JOIN participantes p ON p.bolao_id = b.id

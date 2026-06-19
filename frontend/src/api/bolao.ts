@@ -117,3 +117,8 @@ export async function getFeed(bolaoId: string): Promise<FeedEvento[]> {
 export async function deleteBolao(id: string): Promise<void> {
   await http.delete(`/boloes/${id}`)
 }
+
+export async function setWAGroup(bolaoId: string, jid: string): Promise<Bolao> {
+  const { data } = await http.put<Bolao>(`/boloes/${bolaoId}/whatsapp-group`, { jid })
+  return data
+}
