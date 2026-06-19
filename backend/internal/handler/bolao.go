@@ -146,6 +146,35 @@ func (h *BolaoHandler) SetWAGroup(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, bolao)
 }
 
+// PUT /api/v1/boloes/{id}/whatsapp-notifications
+func (h *BolaoHandler) SetWANotificationsEnabled(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	bolaoID := chi.URLParam(r, "id")
+
+	var body struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apierror.BadRequest(w, "invalid json")
+		return
+	}
+
+	bolao, err := h.svc.SetWANotificationsEnabled(r.Context(), bolaoID, userID, body.Enabled)
+	if err != nil {
+		if errors.Is(err, service.ErrBolaoNotFound) {
+			apierror.NotFound(w, "bolao not found")
+			return
+		}
+		if errors.Is(err, service.ErrNotAdmin) {
+			apierror.Forbidden(w, "only the admin can change notification settings")
+			return
+		}
+		apierror.Internal(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, bolao)
+}
+
 // PATCH /api/v1/boloes/{id}/settings
 func (h *BolaoHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())

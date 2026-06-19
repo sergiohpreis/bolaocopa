@@ -204,7 +204,9 @@
         <WhatsAppAdminPanel
           :bolao-id="bolaoId"
           :linked-group="bolao?.wa_group_jid"
+          :notifications-enabled="bolao?.wa_notifications_enabled ?? true"
           @group-changed="reloadBolao"
+          @notifications-changed="reloadBolao"
         />
 
         <!-- Excluir bolão -->

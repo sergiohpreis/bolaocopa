@@ -19,6 +19,7 @@ export interface Bolao {
   retroativo_enabled: boolean
   taxa_entrada?: string | null
   wa_group_jid?: string | null
+  wa_notifications_enabled?: boolean
   created_at: string
   updated_at: string
 }

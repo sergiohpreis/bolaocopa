@@ -62,7 +62,7 @@ const definirTaxa = `-- name: DefinirTaxa :one
 UPDATE boloes
 SET taxa_entrada = $2, updated_at = NOW()
 WHERE id = $1 AND taxa_entrada IS NULL
-RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid
+RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid, wa_notifications_enabled
 `
 
 type DefinirTaxaParams struct {
@@ -83,6 +83,7 @@ func (q *Queries) DefinirTaxa(ctx context.Context, arg DefinirTaxaParams) (Bolo,
 		&i.RetroativoEnabled,
 		&i.TaxaEntrada,
 		&i.WaGroupJid,
+		&i.WaNotificationsEnabled,
 	)
 	return i, err
 }

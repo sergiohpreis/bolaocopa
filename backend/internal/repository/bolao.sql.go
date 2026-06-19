@@ -14,7 +14,7 @@ import (
 const createBolao = `-- name: CreateBolao :one
 INSERT INTO boloes (name, admin_id)
 VALUES ($1, $2)
-RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid
+RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid, wa_notifications_enabled
 `
 
 type CreateBolaoParams struct {
@@ -35,6 +35,7 @@ func (q *Queries) CreateBolao(ctx context.Context, arg CreateBolaoParams) (Bolo,
 		&i.RetroativoEnabled,
 		&i.TaxaEntrada,
 		&i.WaGroupJid,
+		&i.WaNotificationsEnabled,
 	)
 	return i, err
 }
@@ -54,7 +55,7 @@ func (q *Queries) DeleteBolao(ctx context.Context, arg DeleteBolaoParams) error 
 }
 
 const getBolaoByID = `-- name: GetBolaoByID :one
-SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid FROM boloes WHERE id = $1
+SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid, wa_notifications_enabled FROM boloes WHERE id = $1
 `
 
 func (q *Queries) GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error) {
@@ -70,12 +71,13 @@ func (q *Queries) GetBolaoByID(ctx context.Context, id pgtype.UUID) (Bolo, error
 		&i.RetroativoEnabled,
 		&i.TaxaEntrada,
 		&i.WaGroupJid,
+		&i.WaNotificationsEnabled,
 	)
 	return i, err
 }
 
 const getBolaoByInviteToken = `-- name: GetBolaoByInviteToken :one
-SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid FROM boloes WHERE invite_token = $1
+SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid, wa_notifications_enabled FROM boloes WHERE invite_token = $1
 `
 
 func (q *Queries) GetBolaoByInviteToken(ctx context.Context, inviteToken string) (Bolo, error) {
@@ -91,6 +93,7 @@ func (q *Queries) GetBolaoByInviteToken(ctx context.Context, inviteToken string)
 		&i.RetroativoEnabled,
 		&i.TaxaEntrada,
 		&i.WaGroupJid,
+		&i.WaNotificationsEnabled,
 	)
 	return i, err
 }
@@ -107,12 +110,13 @@ func (q *Queries) GetBolaoWAGroup(ctx context.Context, id pgtype.UUID) (pgtype.T
 }
 
 const listBoloesByJogo = `-- name: ListBoloesByJogo :many
-SELECT DISTINCT b.id, b.name, b.admin_id, b.invite_token, b.created_at, b.updated_at, b.retroativo_enabled, b.taxa_entrada, b.wa_group_jid
+SELECT DISTINCT b.id, b.name, b.admin_id, b.invite_token, b.created_at, b.updated_at, b.retroativo_enabled, b.taxa_entrada, b.wa_group_jid, b.wa_notifications_enabled
 FROM boloes b
 JOIN palpites p ON p.bolao_id = b.id
 WHERE p.jogo_id = $1
   AND b.wa_group_jid IS NOT NULL
   AND b.wa_group_jid != ''
+  AND b.wa_notifications_enabled = TRUE
 ORDER BY b.created_at
 `
 
@@ -135,6 +139,7 @@ func (q *Queries) ListBoloesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]B
 			&i.RetroativoEnabled,
 			&i.TaxaEntrada,
 			&i.WaGroupJid,
+			&i.WaNotificationsEnabled,
 		); err != nil {
 			return nil, err
 		}
@@ -147,7 +152,7 @@ func (q *Queries) ListBoloesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]B
 }
 
 const listBoloesByUser = `-- name: ListBoloesByUser :many
-SELECT b.id, b.name, b.admin_id, b.invite_token, b.created_at, b.updated_at, b.retroativo_enabled, b.taxa_entrada, b.wa_group_jid FROM boloes b
+SELECT b.id, b.name, b.admin_id, b.invite_token, b.created_at, b.updated_at, b.retroativo_enabled, b.taxa_entrada, b.wa_group_jid, b.wa_notifications_enabled FROM boloes b
 JOIN participantes p ON p.bolao_id = b.id
 WHERE p.user_id = $1
 ORDER BY b.created_at DESC
@@ -172,6 +177,7 @@ func (q *Queries) ListBoloesByUser(ctx context.Context, userID pgtype.UUID) ([]B
 			&i.RetroativoEnabled,
 			&i.TaxaEntrada,
 			&i.WaGroupJid,
+			&i.WaNotificationsEnabled,
 		); err != nil {
 			return nil, err
 		}
@@ -184,10 +190,11 @@ func (q *Queries) ListBoloesByUser(ctx context.Context, userID pgtype.UUID) ([]B
 }
 
 const listBoloesByWAGroup = `-- name: ListBoloesByWAGroup :many
-SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid
+SELECT id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid, wa_notifications_enabled
 FROM boloes
 WHERE wa_group_jid IS NOT NULL
   AND wa_group_jid != ''
+  AND wa_notifications_enabled = TRUE
 ORDER BY created_at
 `
 
@@ -210,6 +217,7 @@ func (q *Queries) ListBoloesByWAGroup(ctx context.Context) ([]Bolo, error) {
 			&i.RetroativoEnabled,
 			&i.TaxaEntrada,
 			&i.WaGroupJid,
+			&i.WaNotificationsEnabled,
 		); err != nil {
 			return nil, err
 		}
@@ -225,7 +233,7 @@ const regenerateInviteToken = `-- name: RegenerateInviteToken :one
 UPDATE boloes
 SET invite_token = encode(gen_random_bytes(32), 'hex'), updated_at = NOW()
 WHERE id = $1 AND admin_id = $2
-RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid
+RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid, wa_notifications_enabled
 `
 
 type RegenerateInviteTokenParams struct {
@@ -246,12 +254,13 @@ func (q *Queries) RegenerateInviteToken(ctx context.Context, arg RegenerateInvit
 		&i.RetroativoEnabled,
 		&i.TaxaEntrada,
 		&i.WaGroupJid,
+		&i.WaNotificationsEnabled,
 	)
 	return i, err
 }
 
 const setBolaoWAGroup = `-- name: SetBolaoWAGroup :one
-UPDATE boloes SET wa_group_jid = $2, updated_at = NOW() WHERE id = $1 RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid
+UPDATE boloes SET wa_group_jid = $2, updated_at = NOW() WHERE id = $1 RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid, wa_notifications_enabled
 `
 
 type SetBolaoWAGroupParams struct {
@@ -272,6 +281,34 @@ func (q *Queries) SetBolaoWAGroup(ctx context.Context, arg SetBolaoWAGroupParams
 		&i.RetroativoEnabled,
 		&i.TaxaEntrada,
 		&i.WaGroupJid,
+		&i.WaNotificationsEnabled,
+	)
+	return i, err
+}
+
+const setBolaoWANotificationsEnabled = `-- name: SetBolaoWANotificationsEnabled :one
+UPDATE boloes SET wa_notifications_enabled = $2, updated_at = NOW() WHERE id = $1 RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid, wa_notifications_enabled
+`
+
+type SetBolaoWANotificationsEnabledParams struct {
+	ID                     pgtype.UUID `json:"id"`
+	WaNotificationsEnabled bool        `json:"wa_notifications_enabled"`
+}
+
+func (q *Queries) SetBolaoWANotificationsEnabled(ctx context.Context, arg SetBolaoWANotificationsEnabledParams) (Bolo, error) {
+	row := q.db.QueryRow(ctx, setBolaoWANotificationsEnabled, arg.ID, arg.WaNotificationsEnabled)
+	var i Bolo
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.AdminID,
+		&i.InviteToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RetroativoEnabled,
+		&i.TaxaEntrada,
+		&i.WaGroupJid,
+		&i.WaNotificationsEnabled,
 	)
 	return i, err
 }
@@ -280,7 +317,7 @@ const setRetroativoEnabled = `-- name: SetRetroativoEnabled :one
 UPDATE boloes
 SET retroativo_enabled = $3, updated_at = NOW()
 WHERE id = $1 AND admin_id = $2
-RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid
+RETURNING id, name, admin_id, invite_token, created_at, updated_at, retroativo_enabled, taxa_entrada, wa_group_jid, wa_notifications_enabled
 `
 
 type SetRetroativoEnabledParams struct {
@@ -302,6 +339,7 @@ func (q *Queries) SetRetroativoEnabled(ctx context.Context, arg SetRetroativoEna
 		&i.RetroativoEnabled,
 		&i.TaxaEntrada,
 		&i.WaGroupJid,
+		&i.WaNotificationsEnabled,
 	)
 	return i, err
 }

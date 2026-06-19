@@ -63,12 +63,12 @@
           <button class="wa-btn-link" @click="unlinkGroup">trocar</button>
         </div>
 
-        <!-- Toggle de notificações automáticas -->
+        <!-- Toggle de notificações automáticas (per-bolão) -->
         <div class="wa-toggle-row">
           <span class="wa-toggle-label">Notificações automáticas</span>
           <button
             class="wa-toggle"
-            :class="{ active: status.enabled }"
+            :class="{ active: props.notificationsEnabled }"
             :disabled="toggling"
             @click="doToggle"
           >
@@ -76,9 +76,9 @@
           </button>
         </div>
         <p class="wa-hint" style="margin-top: -0.25rem;">
-          {{ status.enabled
+          {{ props.notificationsEnabled
             ? 'Ativas — fim de jogo, faltam 10 min, partida iniciando.'
-            : 'Pausadas — nenhuma mensagem será enviada.' }}
+            : 'Pausadas — nenhuma mensagem será enviada para este bolão.' }}
         </p>
 
         <!-- Botão de teste único -->
@@ -103,18 +103,19 @@
 import { ref, computed, onMounted } from 'vue'
 import {
   getStatus, getQR, connect, disconnect, listGroups,
-  toggleNotifications, sendHealthcheck,
+  sendHealthcheck,
 } from '@/api/whatsapp'
-import { setWAGroup } from '@/api/bolao'
+import { setWAGroup, setWANotificationsEnabled } from '@/api/bolao'
 import type { WAStatus, WAGroup } from '@/types'
 import { useWAPoller } from '@/composables/useWAPoller'
 
 const props = defineProps<{
   bolaoId: string
   linkedGroup: string | null | undefined
+  notificationsEnabled: boolean
 }>()
 
-const emit = defineEmits<{ 'group-changed': [] }>()
+const emit = defineEmits<{ 'group-changed': []; 'notifications-changed': [] }>()
 
 const status = ref<WAStatus | null>(null)
 const qrImage = ref<string>('')
@@ -244,11 +245,10 @@ async function unlinkGroup() {
 }
 
 async function doToggle() {
-  if (!status.value) return
   toggling.value = true
   try {
-    await toggleNotifications(!status.value.enabled)
-    await refresh()
+    await setWANotificationsEnabled(props.bolaoId, !props.notificationsEnabled)
+    emit('notifications-changed')
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : String(e)
   } finally {

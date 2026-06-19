@@ -182,6 +182,37 @@ func (s *BolaoService) SetWAGroup(ctx context.Context, bolaoID, userID, jid stri
 	return updated, nil
 }
 
+// SetWANotificationsEnabled ativa ou desativa notificações WhatsApp para o bolão.
+// Só o admin pode executar.
+func (s *BolaoService) SetWANotificationsEnabled(ctx context.Context, bolaoID, userID string, enabled bool) (repository.Bolo, error) {
+	bid, err := parseUUID(bolaoID)
+	if err != nil {
+		return repository.Bolo{}, ErrBolaoNotFound
+	}
+	uid, err := parseUUID(userID)
+	if err != nil {
+		return repository.Bolo{}, fmt.Errorf("invalid user id: %w", err)
+	}
+	bolao, err := s.q.GetBolaoByID(ctx, bid)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return repository.Bolo{}, ErrBolaoNotFound
+		}
+		return repository.Bolo{}, fmt.Errorf("getting bolao: %w", err)
+	}
+	if bolao.AdminID != uid {
+		return repository.Bolo{}, ErrNotAdmin
+	}
+	updated, err := s.q.SetBolaoWANotificationsEnabled(ctx, repository.SetBolaoWANotificationsEnabledParams{
+		ID:                    bid,
+		WaNotificationsEnabled: enabled,
+	})
+	if err != nil {
+		return repository.Bolo{}, fmt.Errorf("setting wa_notifications_enabled: %w", err)
+	}
+	return updated, nil
+}
+
 func (s *BolaoService) SetRetroativoEnabled(ctx context.Context, bolaoID, userID string, enabled bool) (repository.Bolo, error) {
 	bid, err := parseUUID(bolaoID)
 	if err != nil {

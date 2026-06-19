@@ -1,49 +1,35 @@
-// PROTOTYPE — throwaway. Calls the whatsapp service directly from the browser.
-// TODO(M1): Before production, remove this file and route all calls through the
-// Go backend (JWT-authenticated). The browser must never hold the API secret.
-// The VITE_WHATSAPP_API_SECRET env var is inlined into the JS bundle at build
-// time and is visible to any user via devtools. Remove before promoting to prod.
-import axios from 'axios'
-import type { WAStatus, WAGroup, WANotifyPayload } from '@/types'
-
-const SECRET = import.meta.env.VITE_WHATSAPP_API_SECRET ?? 'prototype-secret'
-
-const wa = axios.create({
-  baseURL: '/whatsapp',
-  headers: { 'X-API-Secret': SECRET },
-})
+// Calls the WhatsApp service via the Go backend proxy (JWT-authenticated).
+// The API secret is never exposed to the browser.
+import http from './http'
+import type { WAStatus, WAGroup } from '@/types'
 
 export async function getStatus(): Promise<WAStatus> {
-  const { data } = await wa.get<WAStatus>('/status')
+  const { data } = await http.get<WAStatus>('/whatsapp/status')
   return data
 }
 
 export async function getQR(): Promise<string> {
-  const { data } = await wa.get<{ qr_base64: string }>('/qr')
+  const { data } = await http.get<{ qr_base64: string }>('/whatsapp/qr')
   return data.qr_base64
 }
 
 export async function connect(): Promise<void> {
-  await wa.post('/connect')
+  await http.post('/whatsapp/connect')
 }
 
 export async function disconnect(): Promise<void> {
-  await wa.delete('/connect')
+  await http.delete('/whatsapp/connect')
 }
 
 export async function listGroups(): Promise<WAGroup[]> {
-  const { data } = await wa.get<WAGroup[]>('/groups')
+  const { data } = await http.get<WAGroup[]>('/whatsapp/groups')
   return data
 }
 
 export async function toggleNotifications(enabled: boolean): Promise<void> {
-  await wa.post('/toggle', { enabled })
+  await http.post('/whatsapp/toggle', { enabled })
 }
 
 export async function sendHealthcheck(): Promise<void> {
-  await wa.post('/healthcheck')
-}
-
-export async function sendNotification(payload: WANotifyPayload): Promise<void> {
-  await wa.post('/notify', payload)
+  await http.post('/whatsapp/healthcheck')
 }

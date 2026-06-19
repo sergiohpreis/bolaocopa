@@ -73,6 +73,11 @@ func main() {
 	rankingSvc.SetWANotifier(waN)
 	jogoSvc.SetWANotifier(waN)
 
+	var waProxy *handler.WAProxyHandler
+	if cfg.WhatsAppServiceURL != "" && cfg.WhatsAppAPISecret != "" {
+		waProxy = handler.NewWAProxyHandler(cfg.WhatsAppServiceURL, cfg.WhatsAppAPISecret)
+	}
+
 	allowedOrigins := splitOrigins(cfg.AllowedOrigins)
 
 	r := chi.NewRouter()
@@ -93,6 +98,7 @@ func main() {
 		handler.NewRankingHandler(rankingSvc, bolaoSvc),
 		handler.NewFeedHandler(feedSvc),
 		handler.NewTaxaHandler(taxaSvc),
+		waProxy,
 		authMw,
 	)
 

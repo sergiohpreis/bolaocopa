@@ -58,6 +58,7 @@ type Querier interface {
 	// Do NOT change to DO UPDATE without updating the service layer.
 	RegistrarVoto(ctx context.Context, arg RegistrarVotoParams) (TaxaEntradaVoto, error)
 	SetBolaoWAGroup(ctx context.Context, arg SetBolaoWAGroupParams) (Bolo, error)
+	SetBolaoWANotificationsEnabled(ctx context.Context, arg SetBolaoWANotificationsEnabledParams) (Bolo, error)
 	SetRetroativoEnabled(ctx context.Context, arg SetRetroativoEnabledParams) (Bolo, error)
 	UpdatePalpitePontos(ctx context.Context, arg UpdatePalpitePontosParams) error
 	UpsertJogo(ctx context.Context, arg UpsertJogoParams) (UpsertJogoRow, error)
