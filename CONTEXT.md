@@ -7,7 +7,10 @@ Um grupo de apostas criado por um Administrador, compartilhado via link de convi
 O Participante que criou o Bolão. Tem poderes exclusivos: gerar o link de convite e configurar as Regras de Pontuação. Existe exatamente um Administrador por Bolão.
 
 ## Participante
-Qualquer usuário autenticado (via Google OAuth) que entrou no Bolão através do link de convite. Pode registrar e alterar Palpites até o início de cada Jogo.
+Qualquer usuário autenticado que entrou no Bolão através do link de convite. A autenticação pode ser via Google OAuth ou Usuário com Senha. Pode registrar e alterar Palpites até o início de cada Jogo.
+
+## Usuário com Senha
+Método de autenticação onde o usuário cria uma conta diretamente no sistema com e-mail e senha, sem depender de um provedor externo como o Google OAuth.
 
 ## Jogo
 Uma partida da Copa do Mundo, com dois times, horário de início e placar final. Os dados de Jogos são sincronizados automaticamente de uma API externa. O horário de início define o prazo para Palpites.
