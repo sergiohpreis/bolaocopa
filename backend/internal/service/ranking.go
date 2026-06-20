@@ -4,19 +4,22 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/sergiohpreis/bolaocopa/backend/internal/repository"
 )
 
 type RankingService struct {
-	q       repository.Querier
-	feed    *FeedService
-	waNotif WANotifier
+	q        repository.Querier
+	feed     *FeedService
+	waNotif  WANotifier
+	notifier matchNotifier
 }
 
 func NewRankingService(q repository.Querier) *RankingService {
-	return &RankingService{q: q, waNotif: NewNoopWANotifier()}
+	noop := NewNoopWANotifier()
+	return &RankingService{q: q, waNotif: noop, notifier: matchNotifier{q: q, waNotif: noop}}
 }
 
 func (s *RankingService) SetFeed(feed *FeedService) {
@@ -25,6 +28,7 @@ func (s *RankingService) SetFeed(feed *FeedService) {
 
 func (s *RankingService) SetWANotifier(n WANotifier) {
 	s.waNotif = n
+	s.notifier.waNotif = n
 }
 
 func (s *RankingService) Get(ctx context.Context, bolaoID string) ([]repository.GetRankingRow, error) {
@@ -43,8 +47,8 @@ func (s *RankingService) Get(ctx context.Context, bolaoID string) ([]repository.
 }
 
 // NotifyRecentlyFinished dispara a notificação de fim de jogo para jogos recém-finalizados.
-// Envia uma notificação por bolão que tem wa_group_jid configurado e palpites no jogo,
-// com os winners daquele bolão específico.
+// Dedup é por (jogo_id + bolao_id) codificado no notification_type para garantir que um
+// crash parcial não impeça bolões restantes de receberem a notificação.
 func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []repository.Jogo) {
 	boloes, err := s.q.ListBoloesByWAGroup(ctx)
 	if err != nil {
@@ -52,24 +56,29 @@ func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []rep
 		return
 	}
 
-	for _, jogo := range jogos {
-		sent, err := s.q.InsertJogoNotificationIfAbsent(ctx, repository.InsertJogoNotificationIfAbsentParams{
-			JogoID:           jogo.ID,
-			NotificationType: "fim_de_jogo",
-		})
-		if err != nil {
-			slog.Warn("wa notify: insert dedup record", "jogo", jogo.ExternalID, "err", err)
-			continue
-		}
-		if sent == 0 {
-			continue
-		}
+	sem := make(chan struct{}, maxConcurrentSends)
+	var wg sync.WaitGroup
 
+	for _, jogo := range jogos {
 		homeTeam := translateTeam(jogo.HomeTeam)
 		awayTeam := translateTeam(jogo.AwayTeam)
 
 		for _, bolao := range boloes {
-			groupJID := bolao.WaGroupJid.String
+			// Dedup key includes bolao_id so a crash mid-loop doesn't permanently
+			// suppress the remaining bolões for this jogo.
+			dedupType := NotifFimDeJogo + ":" + uuidToString(bolao.ID)
+
+			sent, err := s.q.InsertJogoNotificationIfAbsent(ctx, repository.InsertJogoNotificationIfAbsentParams{
+				JogoID:           jogo.ID,
+				NotificationType: dedupType,
+			})
+			if err != nil {
+				slog.Warn("wa notify: insert dedup record", "jogo", jogo.ExternalID, "bolao", uuidToString(bolao.ID), "err", err)
+				continue
+			}
+			if sent == 0 {
+				continue
+			}
 
 			palpites, err := s.q.ListPalpitesByBolaoAndJogo(ctx, repository.ListPalpitesByBolaoAndJogoParams{
 				BolaoID: bolao.ID,
@@ -87,15 +96,24 @@ func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []rep
 				}
 			}
 
-			slog.Info("wa notify: fim_de_jogo", "home", homeTeam, "away", awayTeam, "bolao", uuidToString(bolao.ID), "winners", len(winners))
-			jid := groupJID
-			go s.waNotif.NotifyFimDeJogo(context.Background(), jid,
-				homeTeam, int(jogo.HomeScore.Int32),
-				awayTeam, int(jogo.AwayScore.Int32),
-				winners,
-			)
+			slog.Info("wa notify: dispatching", "type", NotifFimDeJogo, "home", homeTeam, "away", awayTeam, "bolao", uuidToString(bolao.ID), "winners", len(winners))
+
+			jid := bolao.WaGroupJid.String
+			home, away := homeTeam, awayTeam
+			homeScore, awayScore := int(jogo.HomeScore.Int32), int(jogo.AwayScore.Int32)
+			w := winners
+
+			wg.Add(1)
+			sem <- struct{}{}
+			go func() {
+				defer wg.Done()
+				defer func() { <-sem }()
+				s.waNotif.NotifyFimDeJogo(ctx, jid, home, homeScore, away, awayScore, w)
+			}()
 		}
 	}
+
+	wg.Wait()
 }
 
 // ComputeScoresForFinishedJogos fetches all finished jogos with known scores

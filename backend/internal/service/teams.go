@@ -1,5 +1,7 @@
 package service
 
+// teamNames is read-only after package init. Never write to it — concurrent reads are safe,
+// but a concurrent write would cause a data race.
 var teamNames = map[string]string{
 	"Algeria":            "Argélia",
 	"Argentina":          "Argentina",

@@ -27,17 +27,20 @@ var footballAPIClient = &http.Client{
 }
 
 type JogoService struct {
-	q       repository.Querier
-	apiKey  string
-	waNotif WANotifier
+	q        repository.Querier
+	apiKey   string
+	waNotif  WANotifier
+	notifier matchNotifier
 }
 
 func NewJogoService(q repository.Querier, apiKey string) *JogoService {
-	return &JogoService{q: q, apiKey: apiKey, waNotif: NewNoopWANotifier()}
+	noop := NewNoopWANotifier()
+	return &JogoService{q: q, apiKey: apiKey, waNotif: noop, notifier: matchNotifier{q: q, waNotif: noop}}
 }
 
 func (s *JogoService) SetWANotifier(n WANotifier) {
 	s.waNotif = n
+	s.notifier.waNotif = n
 }
 
 func (s *JogoService) ListAll(ctx context.Context) ([]repository.Jogo, error) {
@@ -153,8 +156,8 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 //	faltam_dez_minutos: [7min, 12min)
 //	partida_iniciando:  [-2min, +2min)
 //
-// Notifications are sent to all bolões that have a wa_group_jid configured,
-// regardless of whether they have palpites on this jogo.
+// The gap [2min, 7min) triggers nothing — intentional, avoids double-alerting.
+// Notifications are sent to all bolões that have a wa_group_jid configured.
 func (s *JogoService) dispatchMatchNotifications(ctx context.Context, jogoID pgtype.UUID, untilStart time.Duration, homeTeam, awayTeam string) {
 	var (
 		notifyFn         func(ctx context.Context, groupJID, homeTeam, awayTeam string)
@@ -163,41 +166,22 @@ func (s *JogoService) dispatchMatchNotifications(ctx context.Context, jogoID pgt
 
 	switch {
 	case untilStart >= 7*time.Minute && untilStart < 12*time.Minute:
-		notificationType = "faltam_dez_minutos"
+		notificationType = NotifFaltamDezMinutos
 		notifyFn = s.waNotif.NotifyFaltamDezMinutos
 	case untilStart >= -2*time.Minute && untilStart < 2*time.Minute:
-		notificationType = "partida_iniciando"
+		notificationType = NotifPartidaIniciando
 		notifyFn = s.waNotif.NotifyPartidaIniciando
 	default:
 		return
 	}
 
-	rows, err := s.q.InsertJogoNotificationIfAbsent(ctx, repository.InsertJogoNotificationIfAbsentParams{
-		JogoID:           jogoID,
-		NotificationType: notificationType,
+	home := translateTeam(homeTeam)
+	away := translateTeam(awayTeam)
+	slog.Info("wa notify: dispatching", "type", notificationType, "home", home, "away", away)
+
+	s.notifier.notifyOnce(ctx, jogoID, notificationType, func(ctx context.Context, jid string) {
+		notifyFn(ctx, jid, home, away)
 	})
-	if err != nil {
-		slog.Warn("wa notify: insert dedup record", "type", notificationType, "err", err)
-		return
-	}
-	if rows == 0 {
-		return
-	}
-
-	homeTeam = translateTeam(homeTeam)
-	awayTeam = translateTeam(awayTeam)
-	slog.Info("wa notify: "+notificationType, "home", homeTeam, "away", awayTeam)
-
-	boloes, err := s.q.ListBoloesByWAGroup(ctx)
-	if err != nil {
-		slog.Warn("wa notify: listing boloes with wa group", "err", err)
-		return
-	}
-	for _, b := range boloes {
-		jid := b.WaGroupJid.String
-		ht, at := homeTeam, awayTeam
-		go notifyFn(ctx, jid, ht, at)
-	}
 }
 
 type footballDataResponse struct {
