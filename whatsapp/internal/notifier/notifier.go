@@ -80,7 +80,7 @@ func (n *Notifier) PartidaIniciando(ctx context.Context, targetJID, homeTeam, aw
 	}
 
 	msg := fmt.Sprintf(
-		"🚀 *A partida começou!*\n%s x %s\nApostas encerradas. Boa sorte! 🍀",
+		"🚀 *A partida está começando!*\n%s x %s\nApostas encerradas. Boa sorte! 🍀",
 		homeTeam, awayTeam,
 	)
 
