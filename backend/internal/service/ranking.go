@@ -53,10 +53,25 @@ func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []rep
 	}
 
 	for _, jogo := range jogos {
+		sent, err := s.q.InsertJogoNotificationIfAbsent(ctx, repository.InsertJogoNotificationIfAbsentParams{
+			JogoID:           jogo.ID,
+			NotificationType: "fim_de_jogo",
+		})
+		if err != nil {
+			slog.Warn("wa notify: insert dedup record", "jogo", jogo.ExternalID, "err", err)
+			continue
+		}
+		if sent == 0 {
+			continue
+		}
+
+		homeTeam := translateTeam(jogo.HomeTeam)
+		awayTeam := translateTeam(jogo.AwayTeam)
+
 		for _, bolao := range boloes {
 			groupJID := bolao.WaGroupJid.String
 
-			rows, err := s.q.ListPalpitesByBolaoAndJogo(ctx, repository.ListPalpitesByBolaoAndJogoParams{
+			palpites, err := s.q.ListPalpitesByBolaoAndJogo(ctx, repository.ListPalpitesByBolaoAndJogoParams{
 				BolaoID: bolao.ID,
 				JogoID:  jogo.ID,
 			})
@@ -66,17 +81,17 @@ func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []rep
 			}
 
 			var winners []WAWinner
-			for _, r := range rows {
+			for _, r := range palpites {
 				if r.Pontos.Valid && r.Pontos.Int32 > 0 {
 					winners = append(winners, WAWinner{Name: r.UserName, Pontos: int(r.Pontos.Int32)})
 				}
 			}
 
-			slog.Info("wa notify: fim_de_jogo", "home", jogo.HomeTeam, "away", jogo.AwayTeam, "bolao", uuidToString(bolao.ID), "winners", len(winners))
+			slog.Info("wa notify: fim_de_jogo", "home", homeTeam, "away", awayTeam, "bolao", uuidToString(bolao.ID), "winners", len(winners))
 			jid := groupJID
 			go s.waNotif.NotifyFimDeJogo(context.Background(), jid,
-				jogo.HomeTeam, int(jogo.HomeScore.Int32),
-				jogo.AwayTeam, int(jogo.AwayScore.Int32),
+				homeTeam, int(jogo.HomeScore.Int32),
+				awayTeam, int(jogo.AwayScore.Int32),
 				winners,
 			)
 		}

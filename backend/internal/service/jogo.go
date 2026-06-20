@@ -139,7 +139,7 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 		//   partida_iniciando:  untilStart in [-2min, +2min)
 		if !finished {
 			untilStart := t.Sub(now)
-			s.dispatchMatchNotifications(context.Background(), untilStart, m.HomeTeam.Name, m.AwayTeam.Name)
+			s.dispatchMatchNotifications(context.Background(), upserted.ID, untilStart, m.HomeTeam.Name, m.AwayTeam.Name)
 		}
 	}
 
@@ -155,19 +155,38 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 //
 // Notifications are sent to all bolões that have a wa_group_jid configured,
 // regardless of whether they have palpites on this jogo.
-func (s *JogoService) dispatchMatchNotifications(ctx context.Context, untilStart time.Duration, homeTeam, awayTeam string) {
-	var notifyFn func(ctx context.Context, groupJID, homeTeam, awayTeam string)
+func (s *JogoService) dispatchMatchNotifications(ctx context.Context, jogoID pgtype.UUID, untilStart time.Duration, homeTeam, awayTeam string) {
+	var (
+		notifyFn         func(ctx context.Context, groupJID, homeTeam, awayTeam string)
+		notificationType string
+	)
 
 	switch {
 	case untilStart >= 7*time.Minute && untilStart < 12*time.Minute:
-		slog.Info("wa notify: faltam_dez_minutos", "home", homeTeam, "away", awayTeam)
+		notificationType = "faltam_dez_minutos"
 		notifyFn = s.waNotif.NotifyFaltamDezMinutos
 	case untilStart >= -2*time.Minute && untilStart < 2*time.Minute:
-		slog.Info("wa notify: partida_iniciando", "home", homeTeam, "away", awayTeam)
+		notificationType = "partida_iniciando"
 		notifyFn = s.waNotif.NotifyPartidaIniciando
 	default:
 		return
 	}
+
+	rows, err := s.q.InsertJogoNotificationIfAbsent(ctx, repository.InsertJogoNotificationIfAbsentParams{
+		JogoID:           jogoID,
+		NotificationType: notificationType,
+	})
+	if err != nil {
+		slog.Warn("wa notify: insert dedup record", "type", notificationType, "err", err)
+		return
+	}
+	if rows == 0 {
+		return
+	}
+
+	homeTeam = translateTeam(homeTeam)
+	awayTeam = translateTeam(awayTeam)
+	slog.Info("wa notify: "+notificationType, "home", homeTeam, "away", awayTeam)
 
 	boloes, err := s.q.ListBoloesByWAGroup(ctx)
 	if err != nil {

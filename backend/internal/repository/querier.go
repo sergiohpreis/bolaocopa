@@ -35,6 +35,7 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	InsertFeedEvento(ctx context.Context, arg InsertFeedEventoParams) (FeedEvento, error)
+	InsertJogoNotificationIfAbsent(ctx context.Context, arg InsertJogoNotificationIfAbsentParams) (int64, error)
 	IsParticipante(ctx context.Context, arg IsParticipanteParams) (bool, error)
 	// Returns true if the user was a participant at or before proposta.created_at.
 	IsParticipanteElegivel(ctx context.Context, arg IsParticipanteElegivelParams) (bool, error)

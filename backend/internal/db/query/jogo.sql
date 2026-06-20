@@ -25,3 +25,8 @@ SELECT * FROM jogos WHERE id = $1;
 
 -- name: ListFinishedJobsWithoutScores :many
 SELECT * FROM jogos WHERE finished = TRUE AND home_score IS NOT NULL;
+
+-- name: InsertJogoNotificationIfAbsent :execrows
+INSERT INTO jogo_notifications (jogo_id, notification_type)
+VALUES ($1, $2)
+ON CONFLICT (jogo_id, notification_type) DO NOTHING;
