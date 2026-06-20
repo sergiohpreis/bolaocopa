@@ -36,6 +36,25 @@ func (q *Queries) GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
 	return i, err
 }
 
+const insertJogoNotificationIfAbsent = `-- name: InsertJogoNotificationIfAbsent :execrows
+INSERT INTO jogo_notifications (jogo_id, notification_type)
+VALUES ($1, $2)
+ON CONFLICT (jogo_id, notification_type) DO NOTHING
+`
+
+type InsertJogoNotificationIfAbsentParams struct {
+	JogoID           pgtype.UUID `json:"jogo_id"`
+	NotificationType string      `json:"notification_type"`
+}
+
+func (q *Queries) InsertJogoNotificationIfAbsent(ctx context.Context, arg InsertJogoNotificationIfAbsentParams) (int64, error) {
+	result, err := q.db.Exec(ctx, insertJogoNotificationIfAbsent, arg.JogoID, arg.NotificationType)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const listFinishedJobsWithoutScores = `-- name: ListFinishedJobsWithoutScores :many
 SELECT id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at FROM jogos WHERE finished = TRUE AND home_score IS NOT NULL
 `

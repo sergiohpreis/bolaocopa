@@ -129,7 +129,7 @@ func main() {
 				return
 			}
 			if len(recentlyFinished) > 0 {
-				rankingSvc.NotifyRecentlyFinished(context.Background(), recentlyFinished)
+				rankingSvc.NotifyRecentlyFinished(syncCtx, recentlyFinished)
 			}
 		}
 		doSync()

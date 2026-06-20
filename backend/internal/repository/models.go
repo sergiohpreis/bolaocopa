@@ -97,6 +97,12 @@ type Jogo struct {
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
+type JogoNotification struct {
+	JogoID           pgtype.UUID        `json:"jogo_id"`
+	NotificationType string             `json:"notification_type"`
+	SentAt           pgtype.Timestamptz `json:"sent_at"`
+}
+
 type Palpite struct {
 	ID        pgtype.UUID        `json:"id"`
 	BolaoID   pgtype.UUID        `json:"bolao_id"`
