@@ -13,21 +13,20 @@ source "$ENV_FILE"
 
 # ============================================================
 # TRAVA DE SEGURANÇA — este script insere dados FICTÍCIOS e apaga
-# seeds anteriores. Só pode escrever no container Postgres LOCAL.
-#
-# O critério é o ALVO, não o .env: o seed sempre escreve via
-# `docker exec` no container abaixo, que só existe na máquina de dev.
-# Produção roda em outro host (VPS), inacessível por este comando.
+# seeds anteriores. Roda apenas onde a flag SEED_ALLOW=1 estiver
+# presente no .env. O .env de PRODUÇÃO nunca deve conter essa flag,
+# então prod fica protegido por padrão (opt-in explícito, não adivinha
+# o ambiente). O nome do container Postgres é o mesmo em dev e prod,
+# por isso o critério é a flag — não o alvo do `docker exec`.
 # ============================================================
 DB_CONTAINER="bolaocopa-postgres"
 FORCE=0
 [[ "${1:-}" == "--force" ]] && FORCE=1
 
-# O container postgres local precisa estar rodando aqui. Se não estiver,
-# ou estamos no lugar errado, ou tentando alvo remoto — aborta.
-if ! docker ps --format '{{.Names}}' | grep -qx "$DB_CONTAINER"; then
-  echo "ABORTADO: container '$DB_CONTAINER' não está rodando nesta máquina." >&2
-  echo "Este seed só escreve no Postgres local. Suba o stack com 'docker compose up' antes." >&2
+if [[ "${SEED_ALLOW:-}" != "1" ]]; then
+  echo "ABORTADO: SEED_ALLOW=1 não está no .env." >&2
+  echo "Este seed insere dados FICTÍCIOS e nunca deve rodar em produção." >&2
+  echo "Para semear um ambiente de desenvolvimento, adicione 'SEED_ALLOW=1' ao .env." >&2
   exit 1
 fi
 
@@ -35,7 +34,7 @@ fi
 # Sem TTY ou resposta diferente de 'sim' cancela limpo (exit 0).
 if [[ "$FORCE" != "1" ]]; then
   ans=""
-  read -r -p "Rodar seed (dados fictícios) no container local '$DB_CONTAINER' (banco '$POSTGRES_DB')? Digite 'sim' para continuar: " ans || true
+  read -r -p "Rodar seed (dados fictícios) no banco '$POSTGRES_DB' (container '$DB_CONTAINER')? Digite 'sim' para continuar: " ans || true
   if [[ "$ans" != "sim" ]]; then
     echo "Cancelado."
     exit 0
