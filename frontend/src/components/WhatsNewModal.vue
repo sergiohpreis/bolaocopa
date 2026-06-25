@@ -4,7 +4,7 @@
       <div v-if="show" class="overlay" @click.self="dismiss">
         <div class="modal">
           <div class="modal-header">
-            <span class="version-badge font-display">v1.4.0</span>
+            <span class="version-badge font-display">v1.3.1</span>
             <button class="close-btn" @click="dismiss">×</button>
           </div>
           <h2 class="modal-title font-display">COMEÇOU O MATA-MATA</h2>
@@ -36,7 +36,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const STORAGE_KEY = 'whats_new_seen_v1.4.0'
+const STORAGE_KEY = 'whats_new_seen_v1.3.1'
 const show = ref(!localStorage.getItem(STORAGE_KEY))
 
 function dismiss() {
