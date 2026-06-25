@@ -11,9 +11,39 @@ fi
 
 source "$ENV_FILE"
 
+# ============================================================
+# TRAVA DE SEGURANÇA — este script insere dados FICTÍCIOS e apaga
+# seeds anteriores. Roda apenas onde a flag SEED_ALLOW=1 estiver
+# presente no .env. O .env de PRODUÇÃO nunca deve conter essa flag,
+# então prod fica protegido por padrão (opt-in explícito, não adivinha
+# o ambiente). O nome do container Postgres é o mesmo em dev e prod,
+# por isso o critério é a flag — não o alvo do `docker exec`.
+# ============================================================
+DB_CONTAINER="bolaocopa-postgres"
+FORCE=0
+[[ "${1:-}" == "--force" ]] && FORCE=1
+
+if [[ "${SEED_ALLOW:-}" != "1" ]]; then
+  echo "ABORTADO: SEED_ALLOW=1 não está no .env." >&2
+  echo "Este seed insere dados FICTÍCIOS e nunca deve rodar em produção." >&2
+  echo "Para semear um ambiente de desenvolvimento, adicione 'SEED_ALLOW=1' ao .env." >&2
+  exit 1
+fi
+
+# Confirmação interativa — apaga e reinsere dados de seed.
+# Sem TTY ou resposta diferente de 'sim' cancela limpo (exit 0).
+if [[ "$FORCE" != "1" ]]; then
+  ans=""
+  read -r -p "Rodar seed (dados fictícios) no banco '$POSTGRES_DB' (container '$DB_CONTAINER')? Digite 'sim' para continuar: " ans || true
+  if [[ "$ans" != "sim" ]]; then
+    echo "Cancelado."
+    exit 0
+  fi
+fi
+
 echo "Rodando seed no banco '$POSTGRES_DB'..."
 
-docker exec -i bolaocopa-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<'SQL'
+docker exec -i "$DB_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<'SQL'
 
 -- ============================================================
 -- SEED — dados fictícios para screenshots locais
@@ -70,18 +100,25 @@ ON CONFLICT (bolao_id, user_id) DO NOTHING;
 
 -- ============================================================
 -- JOGOS
--- 2 encerrados, 1 ao vivo, 3 próximos
+-- stage usa os valores crus da API football-data.org (GROUP_STAGE, LAST_32, LAST_16, ...).
+-- Inclui jogos de várias fases de mata-mata como fixture para a Visão de Chaveamento:
+-- 2 grupos encerrados, 1 grupo ao vivo, 2 grupos próximos, 1 oitava encerrada e 1 próxima.
+-- Quartas/Semi/Final ainda não existem (a chave mostra "a definir" nessas fases).
 -- ============================================================
 INSERT INTO jogos (id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished) VALUES
-  -- Encerrados
-  ('c0000000-0000-0000-0000-000000000001', 'seed-001', 'Brasil',    'Argentina', 'https://flagcdn.com/br.svg', 'https://flagcdn.com/ar.svg', NOW() - INTERVAL '5 days', 'Fase de Grupos', 2, 1, true),
-  ('c0000000-0000-0000-0000-000000000002', 'seed-002', 'França',    'Alemanha',  'https://flagcdn.com/fr.svg', 'https://flagcdn.com/de.svg', NOW() - INTERVAL '3 days', 'Fase de Grupos', 1, 1, true),
-  -- Ao vivo
-  ('c0000000-0000-0000-0000-000000000003', 'seed-003', 'Espanha',   'Portugal',  'https://flagcdn.com/es.svg', 'https://flagcdn.com/pt.svg', NOW() - INTERVAL '1 hour',  'Fase de Grupos', NULL, NULL, false),
-  -- Próximos
-  ('c0000000-0000-0000-0000-000000000004', 'seed-004', 'Inglaterra','Holanda',   'https://flagcdn.com/gb-eng.svg', 'https://flagcdn.com/nl.svg', NOW() + INTERVAL '2 days', 'Fase de Grupos', NULL, NULL, false),
-  ('c0000000-0000-0000-0000-000000000005', 'seed-005', 'Itália',    'Croácia',   'https://flagcdn.com/it.svg', 'https://flagcdn.com/hr.svg', NOW() + INTERVAL '4 days', 'Fase de Grupos', NULL, NULL, false),
-  ('c0000000-0000-0000-0000-000000000006', 'seed-006', 'Uruguai',   'México',    'https://flagcdn.com/uy.svg', 'https://flagcdn.com/mx.svg', NOW() + INTERVAL '6 days', 'Oitavas de Final', NULL, NULL, false)
+  -- Fase de grupos — encerrados
+  ('c0000000-0000-0000-0000-000000000001', 'seed-001', 'Brasil',    'Argentina', 'https://flagcdn.com/br.svg', 'https://flagcdn.com/ar.svg', NOW() - INTERVAL '5 days', 'GROUP_STAGE', 2, 1, true),
+  ('c0000000-0000-0000-0000-000000000002', 'seed-002', 'França',    'Alemanha',  'https://flagcdn.com/fr.svg', 'https://flagcdn.com/de.svg', NOW() - INTERVAL '3 days', 'GROUP_STAGE', 1, 1, true),
+  -- Fase de grupos — ao vivo
+  ('c0000000-0000-0000-0000-000000000003', 'seed-003', 'Espanha',   'Portugal',  'https://flagcdn.com/es.svg', 'https://flagcdn.com/pt.svg', NOW() - INTERVAL '1 hour',  'GROUP_STAGE', NULL, NULL, false),
+  -- Fase de grupos — próximos
+  ('c0000000-0000-0000-0000-000000000004', 'seed-004', 'Inglaterra','Holanda',   'https://flagcdn.com/gb-eng.svg', 'https://flagcdn.com/nl.svg', NOW() + INTERVAL '2 days', 'GROUP_STAGE', NULL, NULL, false),
+  ('c0000000-0000-0000-0000-000000000005', 'seed-005', 'Itália',    'Croácia',   'https://flagcdn.com/it.svg', 'https://flagcdn.com/hr.svg', NOW() + INTERVAL '4 days', 'GROUP_STAGE', NULL, NULL, false),
+  -- Mata-mata — 16-avos (1 encerrado, 1 próximo). LAST_32 é a primeira fase
+  -- eliminatória da Copa 2026 (48 seleções); LAST_16 vem depois. Manter a ordem
+  -- causal: não há confronto definido numa fase sem a anterior ter ocorrido.
+  ('c0000000-0000-0000-0000-000000000006', 'seed-006', 'Uruguai',   'México',    'https://flagcdn.com/uy.svg', 'https://flagcdn.com/mx.svg', NOW() - INTERVAL '2 days', 'LAST_32', 0, 3, true),
+  ('c0000000-0000-0000-0000-000000000007', 'seed-007', 'Bélgica',   'Croácia',   'https://flagcdn.com/be.svg', 'https://flagcdn.com/hr.svg', NOW() + INTERVAL '7 days', 'LAST_32', NULL, NULL, false)
 ON CONFLICT (external_id) DO NOTHING;
 
 -- ============================================================
