@@ -84,9 +84,11 @@ INSERT INTO jogos (id, external_id, home_team, away_team, home_team_flag, away_t
   -- Fase de grupos — próximos
   ('c0000000-0000-0000-0000-000000000004', 'seed-004', 'Inglaterra','Holanda',   'https://flagcdn.com/gb-eng.svg', 'https://flagcdn.com/nl.svg', NOW() + INTERVAL '2 days', 'GROUP_STAGE', NULL, NULL, false),
   ('c0000000-0000-0000-0000-000000000005', 'seed-005', 'Itália',    'Croácia',   'https://flagcdn.com/it.svg', 'https://flagcdn.com/hr.svg', NOW() + INTERVAL '4 days', 'GROUP_STAGE', NULL, NULL, false),
-  -- Mata-mata — oitavas (1 encerrada, 1 próxima). LAST_16 é a string real da API 2026.
-  ('c0000000-0000-0000-0000-000000000006', 'seed-006', 'Uruguai',   'México',    'https://flagcdn.com/uy.svg', 'https://flagcdn.com/mx.svg', NOW() - INTERVAL '2 days', 'LAST_16', 0, 3, true),
-  ('c0000000-0000-0000-0000-000000000007', 'seed-007', 'Bélgica',   'Croácia',   'https://flagcdn.com/be.svg', 'https://flagcdn.com/hr.svg', NOW() + INTERVAL '7 days', 'LAST_16', NULL, NULL, false)
+  -- Mata-mata — 16-avos (1 encerrado, 1 próximo). LAST_32 é a primeira fase
+  -- eliminatória da Copa 2026 (48 seleções); LAST_16 vem depois. Manter a ordem
+  -- causal: não há confronto definido numa fase sem a anterior ter ocorrido.
+  ('c0000000-0000-0000-0000-000000000006', 'seed-006', 'Uruguai',   'México',    'https://flagcdn.com/uy.svg', 'https://flagcdn.com/mx.svg', NOW() - INTERVAL '2 days', 'LAST_32', 0, 3, true),
+  ('c0000000-0000-0000-0000-000000000007', 'seed-007', 'Bélgica',   'Croácia',   'https://flagcdn.com/be.svg', 'https://flagcdn.com/hr.svg', NOW() + INTERVAL '7 days', 'LAST_32', NULL, NULL, false)
 ON CONFLICT (external_id) DO NOTHING;
 
 -- ============================================================
