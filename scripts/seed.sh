@@ -11,9 +11,40 @@ fi
 
 source "$ENV_FILE"
 
+# ============================================================
+# TRAVA DE SEGURANÇA — este script insere dados FICTÍCIOS e apaga
+# seeds anteriores. Só pode escrever no container Postgres LOCAL.
+#
+# O critério é o ALVO, não o .env: o seed sempre escreve via
+# `docker exec` no container abaixo, que só existe na máquina de dev.
+# Produção roda em outro host (VPS), inacessível por este comando.
+# ============================================================
+DB_CONTAINER="bolaocopa-postgres"
+FORCE=0
+[[ "${1:-}" == "--force" ]] && FORCE=1
+
+# O container postgres local precisa estar rodando aqui. Se não estiver,
+# ou estamos no lugar errado, ou tentando alvo remoto — aborta.
+if ! docker ps --format '{{.Names}}' | grep -qx "$DB_CONTAINER"; then
+  echo "ABORTADO: container '$DB_CONTAINER' não está rodando nesta máquina." >&2
+  echo "Este seed só escreve no Postgres local. Suba o stack com 'docker compose up' antes." >&2
+  exit 1
+fi
+
+# Confirmação interativa — apaga e reinsere dados de seed.
+# Sem TTY ou resposta diferente de 'sim' cancela limpo (exit 0).
+if [[ "$FORCE" != "1" ]]; then
+  ans=""
+  read -r -p "Rodar seed (dados fictícios) no container local '$DB_CONTAINER' (banco '$POSTGRES_DB')? Digite 'sim' para continuar: " ans || true
+  if [[ "$ans" != "sim" ]]; then
+    echo "Cancelado."
+    exit 0
+  fi
+fi
+
 echo "Rodando seed no banco '$POSTGRES_DB'..."
 
-docker exec -i bolaocopa-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<'SQL'
+docker exec -i "$DB_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<'SQL'
 
 -- ============================================================
 -- SEED — dados fictícios para screenshots locais
