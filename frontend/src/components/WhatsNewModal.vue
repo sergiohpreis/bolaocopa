@@ -4,30 +4,29 @@
       <div v-if="show" class="overlay" @click.self="dismiss">
         <div class="modal">
           <div class="modal-header">
-            <span class="version-badge font-display">v1.3.0</span>
+            <span class="version-badge font-display">v1.4.0</span>
             <button class="close-btn" @click="dismiss">×</button>
           </div>
-          <h2 class="modal-title font-display">EXCLUIR BOLÃO</h2>
+          <h2 class="modal-title font-display">COMEÇOU O MATA-MATA</h2>
           <p class="modal-subtitle">O que há de novo</p>
 
-          <p class="section-label font-display">PARA O ADMIN</p>
           <ul class="changes">
             <li class="change-item">
-              <span class="change-icon">🗑️</span>
+              <span class="change-icon">🏆</span>
               <div>
-                <div class="change-title">Exclusão com confirmação</div>
-                <div class="change-desc">Na aba ADMIN, o botão "Excluir bolão" abre um resumo do impacto antes de confirmar — participantes, palpites e histórico.</div>
+                <div class="change-title">Palpite nas eliminatórias</div>
+                <div class="change-desc">Os jogos das oitavas, quartas, semis e final entram automaticamente. Palpite normalmente, até o apito de cada jogo.</div>
               </div>
             </li>
             <li class="change-item">
-              <span class="change-icon">⚠️</span>
+              <span class="change-icon">🗺️</span>
               <div>
-                <div class="change-title">Ação permanente</div>
-                <div class="change-desc">A exclusão remove tudo em cascata e não pode ser desfeita. Somente o admin pode fazer isso.</div>
+                <div class="change-title">Visão de chaveamento</div>
+                <div class="change-desc">Na aba JOGOS, alterne entre LISTA e CHAVE para ver o mata-mata organizado por fase, do começo até a final.</div>
               </div>
             </li>
           </ul>
-          <button class="cta-btn font-display" @click="dismiss">ENTENDIDO</button>
+          <button class="cta-btn font-display" @click="dismiss">BORA!</button>
         </div>
       </div>
     </Transition>
@@ -37,7 +36,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const STORAGE_KEY = 'whats_new_seen_v1.3.0'
+const STORAGE_KEY = 'whats_new_seen_v1.4.0'
 const show = ref(!localStorage.getItem(STORAGE_KEY))
 
 function dismiss() {

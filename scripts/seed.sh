@@ -70,18 +70,23 @@ ON CONFLICT (bolao_id, user_id) DO NOTHING;
 
 -- ============================================================
 -- JOGOS
--- 2 encerrados, 1 ao vivo, 3 próximos
+-- stage usa os valores crus da API football-data.org (GROUP_STAGE, LAST_32, LAST_16, ...).
+-- Inclui jogos de várias fases de mata-mata como fixture para a Visão de Chaveamento:
+-- 2 grupos encerrados, 1 grupo ao vivo, 2 grupos próximos, 1 oitava encerrada e 1 próxima.
+-- Quartas/Semi/Final ainda não existem (a chave mostra "a definir" nessas fases).
 -- ============================================================
 INSERT INTO jogos (id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished) VALUES
-  -- Encerrados
-  ('c0000000-0000-0000-0000-000000000001', 'seed-001', 'Brasil',    'Argentina', 'https://flagcdn.com/br.svg', 'https://flagcdn.com/ar.svg', NOW() - INTERVAL '5 days', 'Fase de Grupos', 2, 1, true),
-  ('c0000000-0000-0000-0000-000000000002', 'seed-002', 'França',    'Alemanha',  'https://flagcdn.com/fr.svg', 'https://flagcdn.com/de.svg', NOW() - INTERVAL '3 days', 'Fase de Grupos', 1, 1, true),
-  -- Ao vivo
-  ('c0000000-0000-0000-0000-000000000003', 'seed-003', 'Espanha',   'Portugal',  'https://flagcdn.com/es.svg', 'https://flagcdn.com/pt.svg', NOW() - INTERVAL '1 hour',  'Fase de Grupos', NULL, NULL, false),
-  -- Próximos
-  ('c0000000-0000-0000-0000-000000000004', 'seed-004', 'Inglaterra','Holanda',   'https://flagcdn.com/gb-eng.svg', 'https://flagcdn.com/nl.svg', NOW() + INTERVAL '2 days', 'Fase de Grupos', NULL, NULL, false),
-  ('c0000000-0000-0000-0000-000000000005', 'seed-005', 'Itália',    'Croácia',   'https://flagcdn.com/it.svg', 'https://flagcdn.com/hr.svg', NOW() + INTERVAL '4 days', 'Fase de Grupos', NULL, NULL, false),
-  ('c0000000-0000-0000-0000-000000000006', 'seed-006', 'Uruguai',   'México',    'https://flagcdn.com/uy.svg', 'https://flagcdn.com/mx.svg', NOW() + INTERVAL '6 days', 'Oitavas de Final', NULL, NULL, false)
+  -- Fase de grupos — encerrados
+  ('c0000000-0000-0000-0000-000000000001', 'seed-001', 'Brasil',    'Argentina', 'https://flagcdn.com/br.svg', 'https://flagcdn.com/ar.svg', NOW() - INTERVAL '5 days', 'GROUP_STAGE', 2, 1, true),
+  ('c0000000-0000-0000-0000-000000000002', 'seed-002', 'França',    'Alemanha',  'https://flagcdn.com/fr.svg', 'https://flagcdn.com/de.svg', NOW() - INTERVAL '3 days', 'GROUP_STAGE', 1, 1, true),
+  -- Fase de grupos — ao vivo
+  ('c0000000-0000-0000-0000-000000000003', 'seed-003', 'Espanha',   'Portugal',  'https://flagcdn.com/es.svg', 'https://flagcdn.com/pt.svg', NOW() - INTERVAL '1 hour',  'GROUP_STAGE', NULL, NULL, false),
+  -- Fase de grupos — próximos
+  ('c0000000-0000-0000-0000-000000000004', 'seed-004', 'Inglaterra','Holanda',   'https://flagcdn.com/gb-eng.svg', 'https://flagcdn.com/nl.svg', NOW() + INTERVAL '2 days', 'GROUP_STAGE', NULL, NULL, false),
+  ('c0000000-0000-0000-0000-000000000005', 'seed-005', 'Itália',    'Croácia',   'https://flagcdn.com/it.svg', 'https://flagcdn.com/hr.svg', NOW() + INTERVAL '4 days', 'GROUP_STAGE', NULL, NULL, false),
+  -- Mata-mata — oitavas (1 encerrada, 1 próxima). LAST_16 é a string real da API 2026.
+  ('c0000000-0000-0000-0000-000000000006', 'seed-006', 'Uruguai',   'México',    'https://flagcdn.com/uy.svg', 'https://flagcdn.com/mx.svg', NOW() - INTERVAL '2 days', 'LAST_16', 0, 3, true),
+  ('c0000000-0000-0000-0000-000000000007', 'seed-007', 'Bélgica',   'Croácia',   'https://flagcdn.com/be.svg', 'https://flagcdn.com/hr.svg', NOW() + INTERVAL '7 days', 'LAST_16', NULL, NULL, false)
 ON CONFLICT (external_id) DO NOTHING;
 
 -- ============================================================

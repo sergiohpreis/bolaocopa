@@ -34,8 +34,8 @@ Novas features são anunciadas via **`src/components/WhatsNewModal.vue`**.
 
 - Versão controlada via `STORAGE_KEY = 'whats_new_seen_vX.Y.Z'`
 - Bump a versão no badge, no storage key, e atualizar o conteúdo do modal
-- Versão atual: **v1.3.0** (excluir bolão)
-- Toda feature nova deve atualizar o modal para **v1.4.0**, etc.
+- Versão atual: **v1.4.0** (mata-mata + visão de chaveamento)
+- Toda feature nova deve atualizar o modal para **v1.5.0**, etc.
 
 ## Agent skills
 

@@ -13,7 +13,19 @@ Qualquer usuário autenticado que entrou no Bolão através do link de convite. 
 Método de autenticação onde o usuário cria uma conta diretamente no sistema com e-mail e senha, sem depender de um provedor externo como o Google OAuth.
 
 ## Jogo
-Uma partida da Copa do Mundo, com dois times, horário de início e placar final. Os dados de Jogos são sincronizados automaticamente de uma API externa. O horário de início define o prazo para Palpites.
+Uma partida da Copa do Mundo, com horário de início, placar final e (quando definidos) dois times. Os dados de Jogos são sincronizados automaticamente de uma API externa. No Mata-mata, a API cria o Jogo antes do confronto ser decidido, com os times vazios; um Jogo nesse estado não aceita Palpite. O horário de início define o prazo para Palpites.
+
+## Fase
+A etapa do torneio à qual um Jogo pertence: Fase de Grupos, Oitavas, Quartas, Semifinal, Disputa de Terceiro ou Final. Vem crua da API externa (no código, campo `stage`) e o sistema apenas a exibe — não há lógica de chaveamento nem prazos, Pontuação ou Ranking dependentes de Fase. Serve para agrupar Jogos na exibição.
+_Avoid_: stage, etapa, rodada
+
+## Mata-mata
+O conjunto das Fases eliminatórias (Oitavas, Quartas, Semifinal, Disputa de Terceiro, Final), em oposição à Fase de Grupos. Não é uma entidade do sistema — é o agrupamento que a Visão de Chaveamento representa.
+_Avoid_: eliminatórias, knockout
+
+## Visão de Chaveamento
+Modo de exibição alternativo da aba Jogos (alternável por um toggle Lista/Chave) que mostra apenas os Jogos do Mata-mata, agrupados por Fase na ordem do torneio (16-avos → Oitavas → Quartas → Semifinal → Final/Disputa de Terceiro) e empilhados verticalmente — adequado ao layout mobile do app, sem árvore horizontal nem scroll lateral. Só fica disponível quando existe ao menos um Jogo de Mata-mata. Os confrontos de uma Fase ainda não decididos (Jogos sem times definidos) são resumidos numa única linha "N confrontos a definir" ao lado dos confrontos já conhecidos — sem Palpite.
+_Avoid_: bracket, chaveamento, chave, árvore
 
 ## Palpite
 O placar exato que um Participante prevê para um Jogo. Pode ser criado ou alterado até o momento em que o Jogo começa. Após o início do Jogo, o Palpite é bloqueado.
