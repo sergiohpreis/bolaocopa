@@ -289,10 +289,10 @@
             </div>
 
             <!-- Lista filtrada por fase -->
-            <div v-for="(group, stage) in jogosByStage" :key="stage" class="stage-group">
+            <div v-for="[stage, group] in jogosByStage" :key="stage" class="stage-group">
               <div class="stage-header">
                 <div class="stage-line" />
-                <span class="stage-label">{{ formatStage(String(stage)) }}</span>
+                <span class="stage-label">{{ formatStage(stage) }}</span>
                 <div class="stage-line" />
               </div>
               <div class="flex flex-col gap-2">
@@ -309,7 +309,7 @@
               </div>
             </div>
 
-            <div v-if="Object.keys(jogosByStage).length === 0 && jogosAoVivo.length === 0" class="empty-state">
+            <div v-if="jogosByStage.length === 0 && jogosAoVivo.length === 0" class="empty-state">
               <span style="font-size: 2.5rem;">⚽</span>
               <p class="font-display" style="color: var(--text-muted); font-size: 1.3rem; letter-spacing: 0.06em; margin-top: 12px;">JOGOS NÃO CARREGADOS</p>
             </div>
@@ -345,7 +345,7 @@ import { getBolao, listPalpites, upsertPalpite, upsertPalpiteRetroativo, listPal
 import { listJogos } from '@/api/jogo'
 import { useAuthStore } from '@/stores/auth'
 import { traduzTime } from '@/utils/teams'
-import { formatStage, isMataMata, jogoDefinido, labelColuna, keyColuna, COLUNAS_MATA_MATA } from '@/utils/fases'
+import { formatStage, isMataMata, jogoDefinido, labelColuna, keyColuna, COLUNAS_MATA_MATA, STAGE_ORDER } from '@/utils/fases'
 import JogoCard from '@/components/bolao/JogoCard.vue'
 import FeedPanel from '@/components/bolao/FeedPanel.vue'
 import BracketView from '@/components/bolao/BracketView.vue'
@@ -414,12 +414,20 @@ function groupByStage(list: Jogo[]): Record<string, Jogo[]> {
   return groups
 }
 
-const jogosByStage = computed(() => {
-  const base = jogosDefinidos.value.filter(j => !idsAoVivo.value.has(j.id))
+const jogosByStage = computed((): [string, Jogo[]][] => {
+  let base: Jogo[]
   if (jogoFilter.value === 'proximos') {
-    return groupByStage(base.filter(j => !j.finished))
+    base = jogos.value.filter(j => !idsAoVivo.value.has(j.id) && !j.finished)
+  } else {
+    base = jogosDefinidos.value.filter(j => !idsAoVivo.value.has(j.id) && j.finished)
   }
-  return groupByStage(base.filter(j => j.finished))
+  const groups = groupByStage(base)
+  const orderMap: Record<string, number> = Object.fromEntries(STAGE_ORDER.map((s, i) => [s, i]))
+  return Object.entries(groups).sort(([a], [b]) => {
+    const ai = orderMap[a] ?? 999
+    const bi = orderMap[b] ?? 999
+    return ai - bi
+  })
 })
 
 // Visão de Chaveamento: só disponível quando há ao menos um Jogo de Mata-mata
