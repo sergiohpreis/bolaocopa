@@ -6,7 +6,7 @@
       <!-- Home team -->
       <div class="team home-team">
         <img v-if="jogo.home_team_flag" :src="jogo.home_team_flag" class="flag" :alt="jogo.home_team" />
-        <span class="team-name">{{ traduzTime(jogo.home_team) }}</span>
+        <span class="team-name">{{ traduzTime(jogo.home_team) || 'A Definir' }}</span>
       </div>
 
       <!-- Middle: score or time -->
@@ -26,7 +26,7 @@
 
       <!-- Away team -->
       <div class="team away-team">
-        <span class="team-name">{{ traduzTime(jogo.away_team) }}</span>
+        <span class="team-name">{{ traduzTime(jogo.away_team) || 'A Definir' }}</span>
         <img v-if="jogo.away_team_flag" :src="jogo.away_team_flag" class="flag" :alt="jogo.away_team" />
       </div>
 
@@ -37,7 +37,7 @@
     <!-- Palpite row -->
     <div class="palpite-row">
       <!-- Active input -->
-      <template v-if="!jogo.finished && !isClosed">
+      <template v-if="!jogo.finished && !isClosed && jogoDefinido(jogo)">
         <div class="palpite-input-group">
           <div class="score-input-wrap">
             <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
@@ -110,6 +110,11 @@
         <div class="rejected-hint">palpite anterior rejeitado pelo admin</div>
       </template>
 
+      <!-- Jogo sem times definidos: aguardando confronto -->
+      <template v-else-if="!jogoDefinido(jogo)">
+        <div class="no-palpite">Times a definir</div>
+      </template>
+
       <!-- Sem palpite, retroativo desabilitado -->
       <template v-else-if="(isClosed || jogo.finished) && !retroativoEnabled">
         <div class="no-palpite">Palpite não registrado</div>
@@ -172,6 +177,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { getPalpitesByJogo } from '@/api/bolao'
 import { traduzTime } from '@/utils/teams'
+import { jogoDefinido } from '@/utils/fases'
 import type { Jogo, Palpite, PalpiteDeJogo } from '@/types'
 
 const props = defineProps<{ jogo: Jogo; palpite?: Palpite; bolaoId: string; retroativoEnabled?: boolean }>()

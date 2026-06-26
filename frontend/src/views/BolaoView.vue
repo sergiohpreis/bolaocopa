@@ -250,27 +250,8 @@
             </div>
           </div>
 
-          <!-- Toggle Lista / Chave — só quando há jogos de mata-mata -->
-          <div v-if="temMataMata" class="jogo-view-bar">
-            <button
-              class="jogo-view-btn"
-              :class="{ active: jogoView === 'lista' }"
-              @click="jogoView = 'lista'"
-            >
-              LISTA
-            </button>
-            <button
-              class="jogo-view-btn"
-              :class="{ active: jogoView === 'chave' }"
-              @click="jogoView = 'chave'"
-            >
-              CHAVE
-            </button>
-          </div>
-
-          <!-- Modo LISTA -->
-          <template v-if="jogoView === 'lista'">
-            <!-- Filtros: Próximos / Encerrados -->
+          <!-- Filtros: Próximos / Encerrados -->
+          <div>
             <div class="jogo-filter-bar">
               <button
                 class="jogo-filter-btn"
@@ -289,10 +270,10 @@
             </div>
 
             <!-- Lista filtrada por fase -->
-            <div v-for="(group, stage) in jogosByStage" :key="stage" class="stage-group">
+            <div v-for="[stage, group] in jogosByStage" :key="stage" class="stage-group">
               <div class="stage-header">
                 <div class="stage-line" />
-                <span class="stage-label">{{ formatStage(String(stage)) }}</span>
+                <span class="stage-label">{{ formatStage(stage) }}</span>
                 <div class="stage-line" />
               </div>
               <div class="flex flex-col gap-2">
@@ -309,22 +290,11 @@
               </div>
             </div>
 
-            <div v-if="Object.keys(jogosByStage).length === 0 && jogosAoVivo.length === 0" class="empty-state">
+            <div v-if="jogosByStage.length === 0 && jogosAoVivo.length === 0" class="empty-state">
               <span style="font-size: 2.5rem;">⚽</span>
               <p class="font-display" style="color: var(--text-muted); font-size: 1.3rem; letter-spacing: 0.06em; margin-top: 12px;">JOGOS NÃO CARREGADOS</p>
             </div>
-          </template>
-
-          <!-- Modo CHAVE — acordeão vertical por fase do mata-mata -->
-          <BracketView
-            v-else
-            :colunas="colunasChave"
-            :palpite-map="palpiteMap"
-            :bolao-id="bolaoId"
-            :retroativo-enabled="bolao?.retroativo_enabled ?? false"
-            @save="savePalpite"
-            @save-retroativo="savePalpiteRetroativo"
-          />
+          </div>
         </div>
       </div>
 
@@ -345,10 +315,9 @@ import { getBolao, listPalpites, upsertPalpite, upsertPalpiteRetroativo, listPal
 import { listJogos } from '@/api/jogo'
 import { useAuthStore } from '@/stores/auth'
 import { traduzTime } from '@/utils/teams'
-import { formatStage, isMataMata, jogoDefinido, labelColuna, keyColuna, COLUNAS_MATA_MATA } from '@/utils/fases'
+import { formatStage, jogoDefinido, STAGE_ORDER } from '@/utils/fases'
 import JogoCard from '@/components/bolao/JogoCard.vue'
 import FeedPanel from '@/components/bolao/FeedPanel.vue'
-import BracketView from '@/components/bolao/BracketView.vue'
 import ExcluirBolaoDrawer from '@/components/bolao/ExcluirBolaoDrawer.vue'
 import WhatsAppAdminPanel from '@/components/WhatsAppAdminPanel.vue' // PROTOTYPE
 import type { Bolao, Jogo, Palpite, PalpitePendente, TaxaEstado } from '@/types'
@@ -393,7 +362,6 @@ const palpiteMap = computed(() => {
 })
 
 const jogoFilter = ref<'proximos' | 'encerrados'>('proximos')
-const jogoView = ref<'lista' | 'chave'>('lista')
 
 // Jogos com os dois times conhecidos. A API cria registros de mata-mata com
 // times vazios antes do confronto ser decidido — esses não entram na lista nem
@@ -414,36 +382,24 @@ function groupByStage(list: Jogo[]): Record<string, Jogo[]> {
   return groups
 }
 
-const jogosByStage = computed(() => {
-  const base = jogosDefinidos.value.filter(j => !idsAoVivo.value.has(j.id))
+const jogosByStage = computed((): [string, Jogo[]][] => {
+  let base: Jogo[]
   if (jogoFilter.value === 'proximos') {
-    return groupByStage(base.filter(j => !j.finished))
+    base = jogos.value.filter(j => !idsAoVivo.value.has(j.id) && !j.finished)
+  } else {
+    base = jogosDefinidos.value.filter(j => !idsAoVivo.value.has(j.id) && j.finished)
   }
-  return groupByStage(base.filter(j => j.finished))
+  const groups = groupByStage(base)
+  const orderMap: Record<string, number> = Object.fromEntries(STAGE_ORDER.map((s, i) => [s, i]))
+  return Object.entries(groups).sort(([a], [b]) => {
+    const ai = orderMap[a] ?? 999
+    const bi = orderMap[b] ?? 999
+    return ai - bi
+  })
 })
 
 // Visão de Chaveamento: só disponível quando há ao menos um Jogo de Mata-mata
 // (mesmo que ainda sem times definidos — a fase já existe na chave).
-const temMataMata = computed(() => jogos.value.some(j => isMataMata(j.stage)))
-
-// Seções do Mata-mata na ordem canônica. Cada coluna pode agrupar mais de uma
-// Fase (Final + Disputa de 3º) e expõe os confrontos já decididos mais a
-// contagem de vagas ainda "a definir" (Jogos da fase sem times, que a API cria
-// antes do confronto sair). Uma fase sem nenhum Jogo conta como 1 vaga.
-const colunasChave = computed(() => {
-  const definidosPorStage = groupByStage(jogosDefinidos.value.filter(j => isMataMata(j.stage)))
-  const todosPorStage = groupByStage(jogos.value.filter(j => isMataMata(j.stage)))
-  return COLUNAS_MATA_MATA.map(stages => {
-    const total = stages.reduce((n, s) => n + (todosPorStage[s]?.length ?? 0), 0)
-    const jogos = stages
-      .flatMap(s => definidosPorStage[s] ?? [])
-      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
-    // Vagas a definir: confrontos da fase ainda sem times. Se a fase nem existe
-    // (total 0), mostra ao menos 1 vaga para sinalizar que a chave continua.
-    const vagas = Math.max(total - jogos.length, total === 0 ? 1 : 0)
-    return { key: keyColuna(stages), label: labelColuna(stages), jogos, vagas }
-  })
-})
 
 onMounted(async () => {
   try {
@@ -1253,33 +1209,4 @@ function copyInvite() {
   color: rgba(255,255,255,0.55);
 }
 
-/* Toggle Lista / Chave — pílula segmentada, distinta da barra de filtros */
-.jogo-view-bar {
-  display: inline-flex;
-  gap: 4px;
-  margin-bottom: 16px;
-  padding: 3px;
-  border: 1px solid rgba(57,255,106,0.18);
-  border-radius: 999px;
-  background: rgba(57,255,106,0.04);
-}
-.jogo-view-btn {
-  padding: 5px 16px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 0.78rem;
-  letter-spacing: 0.14em;
-  cursor: pointer;
-  transition: color 0.2s, background 0.2s;
-}
-.jogo-view-btn.active {
-  color: var(--neon);
-  background: rgba(57,255,106,0.14);
-}
-.jogo-view-btn:not(.active):hover {
-  color: rgba(255,255,255,0.55);
-}
 </style>

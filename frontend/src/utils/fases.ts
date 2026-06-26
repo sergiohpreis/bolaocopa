@@ -7,6 +7,18 @@
 // confirmado contra os dados reais da API. ROUND_OF_16 é mantido como alias
 // para tolerar competições com 32 seleções e os dados de seed.
 
+// Ordem canônica de todas as fases para ordenação da lista de jogos.
+export const STAGE_ORDER = [
+  'GROUP_STAGE',
+  'LAST_32',
+  'LAST_16',
+  'ROUND_OF_16',
+  'QUARTER_FINALS',
+  'SEMI_FINALS',
+  'THIRD_PLACE',
+  'FINAL',
+] as const
+
 // Colunas do Mata-mata, na ordem do torneio. O índice = posição na Visão de
 // Chaveamento. THIRD_PLACE e FINAL compartilham a última coluna.
 export const COLUNAS_MATA_MATA = [
