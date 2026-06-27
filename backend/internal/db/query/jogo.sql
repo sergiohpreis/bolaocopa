@@ -1,6 +1,6 @@
 -- name: UpsertJogo :one
 WITH before AS (
-    SELECT finished FROM jogos WHERE external_id = $1
+    SELECT finished, home_score, away_score FROM jogos WHERE external_id = $1
 )
 INSERT INTO jogos (external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -15,7 +15,10 @@ ON CONFLICT (external_id) DO UPDATE
         away_score     = EXCLUDED.away_score,
         finished       = EXCLUDED.finished,
         updated_at     = NOW()
-RETURNING *, (SELECT COALESCE(finished, FALSE) FROM before) AS was_finished;
+RETURNING *,
+    (SELECT COALESCE(finished, FALSE) FROM before) AS was_finished,
+    (SELECT home_score FROM before) AS was_home_score,
+    (SELECT away_score FROM before) AS was_away_score;
 
 -- name: ListJogos :many
 SELECT * FROM jogos ORDER BY starts_at ASC;
@@ -23,7 +26,7 @@ SELECT * FROM jogos ORDER BY starts_at ASC;
 -- name: GetJogoByID :one
 SELECT * FROM jogos WHERE id = $1;
 
--- name: ListFinishedJobsWithoutScores :many
+-- name: ListFinishedJogosWithScores :many
 SELECT * FROM jogos WHERE finished = TRUE AND home_score IS NOT NULL;
 
 -- name: InsertJogoNotificationIfAbsent :execrows
