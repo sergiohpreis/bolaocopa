@@ -44,7 +44,7 @@ type Querier interface {
 	ListBoloesByUser(ctx context.Context, userID pgtype.UUID) ([]Bolo, error)
 	ListBoloesByWAGroup(ctx context.Context) ([]Bolo, error)
 	ListFeedByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListFeedByBolaoRow, error)
-	ListFinishedJobsWithoutScores(ctx context.Context) ([]Jogo, error)
+	ListFinishedJogosWithScores(ctx context.Context) ([]Jogo, error)
 	ListJogos(ctx context.Context) ([]Jogo, error)
 	ListPalpitesByBolaoAndJogo(ctx context.Context, arg ListPalpitesByBolaoAndJogoParams) ([]ListPalpitesByBolaoAndJogoRow, error)
 	ListPalpitesByBolaoAndUser(ctx context.Context, arg ListPalpitesByBolaoAndUserParams) ([]Palpite, error)

@@ -65,8 +65,11 @@ func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []rep
 
 		for _, bolao := range boloes {
 			// Dedup key includes bolao_id so a crash mid-loop doesn't permanently
-			// suppress the remaining bolões for this jogo.
-			dedupType := NotifFimDeJogo + ":" + uuidToString(bolao.ID)
+			// suppress the remaining bolões for this jogo, and the final score so a
+			// corrected result (e.g. an annulled goal) re-notifies with the right
+			// score and winners — each distinct score notifies at most once.
+			dedupType := fmt.Sprintf("%s:%d-%d:%s", NotifFimDeJogo,
+				jogo.HomeScore.Int32, jogo.AwayScore.Int32, uuidToString(bolao.ID))
 
 			sent, err := s.q.InsertJogoNotificationIfAbsent(ctx, repository.InsertJogoNotificationIfAbsentParams{
 				JogoID:           jogo.ID,
@@ -117,9 +120,11 @@ func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []rep
 }
 
 // ComputeScoresForFinishedJogos fetches all finished jogos with known scores
-// and computes pontos for every palpite.
+// and (re)computes pontos for every palpite. Re-running is safe and cheap:
+// scoreJogo only writes when a palpite's computed score changed, so a corrected
+// final score (e.g. an annulled goal) is reflected on the next sync.
 func (s *RankingService) ComputeScoresForFinishedJogos(ctx context.Context) error {
-	jogos, err := s.q.ListFinishedJobsWithoutScores(ctx)
+	jogos, err := s.q.ListFinishedJogosWithScores(ctx)
 	if err != nil {
 		return fmt.Errorf("listing finished jogos: %w", err)
 	}
@@ -147,10 +152,15 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 	jogoIDStr := uuidToString(jogo.ID)
 
 	for _, p := range palpites {
-		if p.Pontos.Valid {
+		pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32)
+
+		// Skip the write when the stored score already matches — keeps the job
+		// idempotent so it can run every sync. When the jogo's final score is
+		// corrected (e.g. an annulled goal), the recomputed value differs and we
+		// update in place, healing stale pontos.
+		if p.Pontos.Valid && p.Pontos.Int32 == pontos {
 			continue
 		}
-		pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32)
 		if err := s.q.UpdatePalpitePontos(ctx, repository.UpdatePalpitePontosParams{
 			Pontos:  pgtype.Int4{Int32: pontos, Valid: true},
 			BolaoID: p.BolaoID,
@@ -158,9 +168,14 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 			UserID:  p.UserID,
 		}); err != nil {
 			slog.Warn("failed to update pontos", "palpite_id", p.ID, "error", err)
+			continue
 		}
-		bolaoIDStr := uuidToString(p.BolaoID)
-		boloesComPalpiteNovo[bolaoIDStr] = true
+		// resultado_apurado só é emitido para palpites que ainda não tinham pontos —
+		// correções de placar atualizam o valor mas não re-disparam o evento de feed.
+		if !p.Pontos.Valid {
+			bolaoIDStr := uuidToString(p.BolaoID)
+			boloesComPalpiteNovo[bolaoIDStr] = true
+		}
 	}
 
 	for bolaoIDStr := range boloesComPalpiteNovo {

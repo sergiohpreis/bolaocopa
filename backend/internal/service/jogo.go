@@ -118,9 +118,16 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 			continue
 		}
 
-		// Track jogos that transitioned !finished → finished in this sync.
-		// WasFinished comes from the CTE that reads the pre-upsert state.
-		if upserted.Finished && !upserted.WasFinished && upserted.HomeScore.Valid && upserted.AwayScore.Valid {
+		// Notify on two transitions, both surfaced via the score-aware dedup key in
+		// NotifyRecentlyFinished (which keys on the final score, so each distinct score
+		// notifies at most once):
+		//   1. !finished → finished (first fim-de-jogo)
+		//   2. already finished but the final score changed (e.g. an annulled goal)
+		// WasFinished/WasHomeScore/WasAwayScore come from the CTE reading pre-upsert state.
+		scoreChanged := upserted.HomeScore != upserted.WasHomeScore || upserted.AwayScore != upserted.WasAwayScore
+		newlyFinished := upserted.Finished && !upserted.WasFinished
+		correctedScore := upserted.Finished && upserted.WasFinished && scoreChanged
+		if (newlyFinished || correctedScore) && upserted.HomeScore.Valid && upserted.AwayScore.Valid {
 			recentlyFinished = append(recentlyFinished, repository.Jogo{
 				ID:         upserted.ID,
 				ExternalID: upserted.ExternalID,
