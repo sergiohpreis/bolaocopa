@@ -151,7 +151,7 @@ type ListPalpitesByBolaoAndJogoRow struct {
 	JogoID     pgtype.UUID        `json:"jogo_id"`
 	HomeScore  int32              `json:"home_score"`
 	AwayScore  int32              `json:"away_score"`
-	Pontos     pgtype.Int4        `json:"pontos"`
+	Pontos     pgtype.Numeric     `json:"pontos"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 	Status     string             `json:"status"`
@@ -283,7 +283,7 @@ type ListPalpitesPendentesRow struct {
 	JogoID        pgtype.UUID        `json:"jogo_id"`
 	HomeScore     int32              `json:"home_score"`
 	AwayScore     int32              `json:"away_score"`
-	Pontos        pgtype.Int4        `json:"pontos"`
+	Pontos        pgtype.Numeric     `json:"pontos"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	Status        string             `json:"status"`
@@ -350,7 +350,7 @@ type ListPalpitesRetroativosAprovadosRow struct {
 	JogoID        pgtype.UUID        `json:"jogo_id"`
 	HomeScore     int32              `json:"home_score"`
 	AwayScore     int32              `json:"away_score"`
-	Pontos        pgtype.Int4        `json:"pontos"`
+	Pontos        pgtype.Numeric     `json:"pontos"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	Status        string             `json:"status"`
@@ -407,10 +407,10 @@ WHERE bolao_id = $2 AND jogo_id = $3 AND user_id = $4
 `
 
 type UpdatePalpitePontosParams struct {
-	Pontos  pgtype.Int4 `json:"pontos"`
-	BolaoID pgtype.UUID `json:"bolao_id"`
-	JogoID  pgtype.UUID `json:"jogo_id"`
-	UserID  pgtype.UUID `json:"user_id"`
+	Pontos  pgtype.Numeric `json:"pontos"`
+	BolaoID pgtype.UUID    `json:"bolao_id"`
+	JogoID  pgtype.UUID    `json:"jogo_id"`
+	UserID  pgtype.UUID    `json:"user_id"`
 }
 
 func (q *Queries) UpdatePalpitePontos(ctx context.Context, arg UpdatePalpitePontosParams) error {

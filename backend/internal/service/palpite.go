@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sergiohpreis/bolaocopa/backend/internal/repository"
 )
@@ -271,9 +270,13 @@ func (s *PalpiteService) AprovarOuRejeitar(ctx context.Context, bolaoID, palpite
 		// Se o jogo já terminou, calcular e persistir pontos imediatamente na mesma transação.
 		jogo, err := qtx.GetJogoByID(ctx, p.JogoID)
 		if err == nil && jogo.Finished && jogo.HomeScore.Valid && jogo.AwayScore.Valid {
-			pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32)
+			pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32, jogo.Stage, jogo.Winner.String)
+			pontosNumeric, err := float64ToNumeric(pontos)
+			if err != nil {
+				return repository.Palpite{}, fmt.Errorf("converting pontos: %w", err)
+			}
 			if err := qtx.UpdatePalpitePontos(ctx, repository.UpdatePalpitePontosParams{
-				Pontos:  pgtype.Int4{Int32: pontos, Valid: true},
+				Pontos:  pontosNumeric,
 				BolaoID: p.BolaoID,
 				JogoID:  p.JogoID,
 				UserID:  p.UserID,

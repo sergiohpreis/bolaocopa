@@ -94,9 +94,13 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 		finished := m.Status == "FINISHED"
 		homeScore := pgtype.Int4{}
 		awayScore := pgtype.Int4{}
+		winner := pgtype.Text{}
 		if finished && m.Score.FullTime.Home != nil && m.Score.FullTime.Away != nil {
 			homeScore = pgtype.Int4{Int32: int32(*m.Score.FullTime.Home), Valid: true}
 			awayScore = pgtype.Int4{Int32: int32(*m.Score.FullTime.Away), Valid: true}
+			if m.Score.Winner != "" {
+				winner = pgtype.Text{String: m.Score.Winner, Valid: true}
+			}
 		}
 
 		params := repository.UpsertJogoParams{
@@ -110,6 +114,7 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 			HomeScore:    homeScore,
 			AwayScore:    awayScore,
 			Finished:     finished,
+			Winner:       winner,
 		}
 
 		upserted, err := s.q.UpsertJogo(ctx, params)
@@ -138,6 +143,7 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 				Finished:   upserted.Finished,
 				StartsAt:   upserted.StartsAt,
 				Stage:      upserted.Stage,
+				Winner:     upserted.Winner,
 				CreatedAt:  upserted.CreatedAt,
 				UpdatedAt:  upserted.UpdatedAt,
 			})
@@ -211,6 +217,7 @@ type fdTeam struct {
 }
 
 type fdScore struct {
+	Winner   string  `json:"winner"`
 	FullTime fdGoals `json:"fullTime"`
 }
 

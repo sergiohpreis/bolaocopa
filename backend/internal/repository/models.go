@@ -95,6 +95,7 @@ type Jogo struct {
 	Finished     bool               `json:"finished"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	Winner       pgtype.Text        `json:"winner"`
 }
 
 type JogoNotification struct {
@@ -110,7 +111,7 @@ type Palpite struct {
 	JogoID    pgtype.UUID        `json:"jogo_id"`
 	HomeScore int32              `json:"home_score"`
 	AwayScore int32              `json:"away_score"`
-	Pontos    pgtype.Int4        `json:"pontos"`
+	Pontos    pgtype.Numeric     `json:"pontos"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	Status    string             `json:"status"`
