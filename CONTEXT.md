@@ -37,11 +37,24 @@ Palpite registrado após o início de um Jogo, permitido apenas quando o Adminis
 O placar final de um Jogo, obtido da API externa. Usado para calcular a Pontuação de cada Palpite.
 
 ## Pontuação
-Valor atribuído a um Palpite após o Resultado ser conhecido:
-- **Placar exato**: 10 pontos
-- **Acertou vencedor ou empate**: 3 pontos
-- **Errou**: 0 pontos
-- **Palpite não registrado**: 0 pontos (equivalente a errar)
+Valor atribuído a um Palpite após o Resultado ser conhecido. Pode ser decimal (ex: 4.5).
+
+**Fase de Grupos:**
+- Placar exato: 10 pontos
+- Acertou vencedor ou empate: 3 pontos
+- Errou: 0 pontos
+
+**Mata-mata:** a pontuação base da Fase de Grupos é multiplicada por um fator crescente por Fase.
+- Acertou **quem avança** (time que o Participante chutou para vencer pelo placar): `3 × multiplicador`
+- Acertou o **placar exato** do tempo normal: `10 × multiplicador` (e o time chutado avançou)
+- Errou quem avança: 0 pontos
+
+Multiplicadores: 16-avos 1.5×, Oitavas 2×, Quartas 2.5×, Semis 3×, Final 3.5×.
+
+Jogos decididos nos pênaltis: o vencedor é determinado pelo campo `winner` da API externa — não pelo placar do tempo normal. Assim, um palpite de `2×0` para o Brasil conta como "acertou quem avança" se o Brasil passar, mesmo que o placar tenha sido `1×1` com pênaltis.
+
+Palpite não registrado: 0 pontos (equivalente a errar).
+_Avoid_: peso por fase, bônus de fase
 
 ## Ranking
 Classificação global de todos os Participantes de um Bolão, ordenada pela soma de Pontuações. Único por Bolão — não há rankings por fase.

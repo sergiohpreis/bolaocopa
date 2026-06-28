@@ -4,25 +4,25 @@
       <div v-if="show" class="overlay" @click.self="dismiss">
         <div class="modal">
           <div class="modal-header">
-            <span class="version-badge font-display">v1.3.1</span>
+            <span class="version-badge font-display">v1.5.0</span>
             <button class="close-btn" @click="dismiss">×</button>
           </div>
-          <h2 class="modal-title font-display">COMEÇOU O MATA-MATA</h2>
+          <h2 class="modal-title font-display">PONTUAÇÃO DO MATA-MATA</h2>
           <p class="modal-subtitle">O que há de novo</p>
 
           <ul class="changes">
             <li class="change-item">
-              <span class="change-icon">🏆</span>
+              <span class="change-icon">⚡</span>
               <div>
-                <div class="change-title">Palpite nas eliminatórias</div>
-                <div class="change-desc">Os jogos das oitavas, quartas, semis e final entram automaticamente. Palpite normalmente, até o apito de cada jogo.</div>
+                <div class="change-title">Pontos crescem por fase</div>
+                <div class="change-desc">Quanto mais longe no torneio, mais vale: 16-avos 1.5×, oitavas 2×, quartas 2.5×, semis 3×, final 3.5×.</div>
               </div>
             </li>
             <li class="change-item">
-              <span class="change-icon">🗺️</span>
+              <span class="change-icon">🎯</span>
               <div>
-                <div class="change-title">Visão de chaveamento</div>
-                <div class="change-desc">Na aba JOGOS, alterne entre LISTA e CHAVE para ver o mata-mata organizado por fase, do começo até a final.</div>
+                <div class="change-title">Pênaltis contam</div>
+                <div class="change-desc">Quem você chutou para avançar é o que vale — mesmo que o jogo vá para os pênaltis.</div>
               </div>
             </li>
           </ul>
@@ -36,7 +36,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const STORAGE_KEY = 'whats_new_seen_v1.3.1'
+const STORAGE_KEY = 'whats_new_seen_v1.5.0'
 const show = ref(!localStorage.getItem(STORAGE_KEY))
 
 function dismiss() {

@@ -12,7 +12,7 @@ import (
 )
 
 const getJogoByID = `-- name: GetJogoByID :one
-SELECT id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at FROM jogos WHERE id = $1
+SELECT id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at, winner FROM jogos WHERE id = $1
 `
 
 func (q *Queries) GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error) {
@@ -32,6 +32,7 @@ func (q *Queries) GetJogoByID(ctx context.Context, id pgtype.UUID) (Jogo, error)
 		&i.Finished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Winner,
 	)
 	return i, err
 }
@@ -56,7 +57,7 @@ func (q *Queries) InsertJogoNotificationIfAbsent(ctx context.Context, arg Insert
 }
 
 const listFinishedJogosWithScores = `-- name: ListFinishedJogosWithScores :many
-SELECT id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at FROM jogos WHERE finished = TRUE AND home_score IS NOT NULL
+SELECT id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at, winner FROM jogos WHERE finished = TRUE AND home_score IS NOT NULL
 `
 
 func (q *Queries) ListFinishedJogosWithScores(ctx context.Context) ([]Jogo, error) {
@@ -82,6 +83,7 @@ func (q *Queries) ListFinishedJogosWithScores(ctx context.Context) ([]Jogo, erro
 			&i.Finished,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Winner,
 		); err != nil {
 			return nil, err
 		}
@@ -94,7 +96,7 @@ func (q *Queries) ListFinishedJogosWithScores(ctx context.Context) ([]Jogo, erro
 }
 
 const listJogos = `-- name: ListJogos :many
-SELECT id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at FROM jogos ORDER BY starts_at ASC
+SELECT id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at, winner FROM jogos ORDER BY starts_at ASC
 `
 
 func (q *Queries) ListJogos(ctx context.Context) ([]Jogo, error) {
@@ -120,6 +122,7 @@ func (q *Queries) ListJogos(ctx context.Context) ([]Jogo, error) {
 			&i.Finished,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Winner,
 		); err != nil {
 			return nil, err
 		}
@@ -135,8 +138,8 @@ const upsertJogo = `-- name: UpsertJogo :one
 WITH before AS (
     SELECT finished, home_score, away_score FROM jogos WHERE external_id = $1
 )
-INSERT INTO jogos (external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO jogos (external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, winner)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (external_id) DO UPDATE
     SET home_team      = EXCLUDED.home_team,
         away_team      = EXCLUDED.away_team,
@@ -147,8 +150,9 @@ ON CONFLICT (external_id) DO UPDATE
         home_score     = EXCLUDED.home_score,
         away_score     = EXCLUDED.away_score,
         finished       = EXCLUDED.finished,
+        winner         = EXCLUDED.winner,
         updated_at     = NOW()
-RETURNING id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at,
+RETURNING id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at, winner,
     (SELECT COALESCE(finished, FALSE) FROM before) AS was_finished,
     (SELECT home_score FROM before) AS was_home_score,
     (SELECT away_score FROM before) AS was_away_score
@@ -165,6 +169,7 @@ type UpsertJogoParams struct {
 	HomeScore    pgtype.Int4        `json:"home_score"`
 	AwayScore    pgtype.Int4        `json:"away_score"`
 	Finished     bool               `json:"finished"`
+	Winner       pgtype.Text        `json:"winner"`
 }
 
 type UpsertJogoRow struct {
@@ -181,6 +186,7 @@ type UpsertJogoRow struct {
 	Finished     bool               `json:"finished"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	Winner       pgtype.Text        `json:"winner"`
 	WasFinished  bool               `json:"was_finished"`
 	WasHomeScore pgtype.Int4        `json:"was_home_score"`
 	WasAwayScore pgtype.Int4        `json:"was_away_score"`
@@ -198,6 +204,7 @@ func (q *Queries) UpsertJogo(ctx context.Context, arg UpsertJogoParams) (UpsertJ
 		arg.HomeScore,
 		arg.AwayScore,
 		arg.Finished,
+		arg.Winner,
 	)
 	var i UpsertJogoRow
 	err := row.Scan(
@@ -214,6 +221,7 @@ func (q *Queries) UpsertJogo(ctx context.Context, arg UpsertJogoParams) (UpsertJ
 		&i.Finished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Winner,
 		&i.WasFinished,
 		&i.WasHomeScore,
 		&i.WasAwayScore,

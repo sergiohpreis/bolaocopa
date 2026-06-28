@@ -1,0 +1,2 @@
+ALTER TABLE palpites ALTER COLUMN pontos TYPE INT USING pontos::INT;
+ALTER TABLE jogos DROP COLUMN winner;

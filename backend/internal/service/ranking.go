@@ -94,8 +94,8 @@ func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []rep
 
 			var winners []WAWinner
 			for _, r := range palpites {
-				if r.Pontos.Valid && r.Pontos.Int32 > 0 {
-					winners = append(winners, WAWinner{Name: r.UserName, Pontos: int(r.Pontos.Int32)})
+				if pts, ok := numericToFloat64(r.Pontos); ok && pts > 0 {
+					winners = append(winners, WAWinner{Name: r.UserName, Pontos: int(pts)})
 				}
 			}
 
@@ -152,17 +152,22 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 	jogoIDStr := uuidToString(jogo.ID)
 
 	for _, p := range palpites {
-		pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32)
+		pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32, jogo.Stage, jogo.Winner.String)
 
 		// Skip the write when the stored score already matches — keeps the job
 		// idempotent so it can run every sync. When the jogo's final score is
 		// corrected (e.g. an annulled goal), the recomputed value differs and we
 		// update in place, healing stale pontos.
-		if p.Pontos.Valid && p.Pontos.Int32 == pontos {
+		if stored, ok := numericToFloat64(p.Pontos); ok && stored == pontos {
+			continue
+		}
+		pontosNumeric, err := float64ToNumeric(pontos)
+		if err != nil {
+			slog.Warn("failed to convert pontos to numeric", "palpite_id", p.ID, "pontos", pontos, "error", err)
 			continue
 		}
 		if err := s.q.UpdatePalpitePontos(ctx, repository.UpdatePalpitePontosParams{
-			Pontos:  pgtype.Int4{Int32: pontos, Valid: true},
+			Pontos:  pontosNumeric,
 			BolaoID: p.BolaoID,
 			JogoID:  p.JogoID,
 			UserID:  p.UserID,
@@ -190,17 +195,55 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 	return nil
 }
 
-func calcPontos(palHome, palAway, resHome, resAway int32) int32 {
+var stageMultiplier = map[string]float64{
+	"LAST_32":        1.5,
+	"LAST_16":        2.0,
+	"ROUND_OF_16":    2.0,
+	"QUARTER_FINALS": 2.5,
+	"SEMI_FINALS":    3.0,
+	"THIRD_PLACE":    3.5,
+	"FINAL":          3.5,
+}
+
+func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner string) float64 {
+	mult, isKnockout := stageMultiplier[stage]
+
+	if isKnockout {
+		if palHome == resHome && palAway == resAway {
+			return 10.0 * mult
+		}
+		// Em pênaltis, apiWinner ("HOME_TEAM"/"AWAY_TEAM") decide quem avançou.
+		// Sem pênaltis, apiWinner reflete o placar de 90'.
+		palSide := palSideWinner(palHome, palAway)
+		if palSide != "" && palSide == apiWinner {
+			return 3.0 * mult
+		}
+		return 0
+	}
+
+	// Fase de Grupos
 	if palHome == resHome && palAway == resAway {
 		return 10
 	}
-	if winner(palHome, palAway) == winner(resHome, resAway) {
+	if scoreWinner(palHome, palAway) == scoreWinner(resHome, resAway) {
 		return 3
 	}
 	return 0
 }
 
-func winner(home, away int32) int {
+// palSideWinner retorna "HOME_TEAM" ou "AWAY_TEAM" conforme o placar chutado.
+// Retorna "" para empate — no mata-mata empate sem winner não pontua "quem avança".
+func palSideWinner(home, away int32) string {
+	if home > away {
+		return "HOME_TEAM"
+	}
+	if away > home {
+		return "AWAY_TEAM"
+	}
+	return ""
+}
+
+func scoreWinner(home, away int32) int {
 	if home > away {
 		return 1
 	}
@@ -208,4 +251,21 @@ func winner(home, away int32) int {
 		return -1
 	}
 	return 0
+}
+
+func numericToFloat64(n pgtype.Numeric) (float64, bool) {
+	if !n.Valid {
+		return 0, false
+	}
+	f, err := n.Float64Value()
+	if err != nil || !f.Valid {
+		return 0, false
+	}
+	return f.Float64, true
+}
+
+func float64ToNumeric(f float64) (pgtype.Numeric, error) {
+	var n pgtype.Numeric
+	err := n.Scan(fmt.Sprintf("%.1f", f))
+	return n, err
 }
