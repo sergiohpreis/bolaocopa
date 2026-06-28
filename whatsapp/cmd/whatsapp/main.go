@@ -177,8 +177,8 @@ func main() {
 				HomeScore int    `json:"home_score"`
 				AwayScore int    `json:"away_score"`
 				Winners   []struct {
-					Name   string `json:"name"`
-					Pontos int    `json:"pontos"`
+					Name   string  `json:"name"`
+					Pontos float64 `json:"pontos"`
 				} `json:"winners"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {

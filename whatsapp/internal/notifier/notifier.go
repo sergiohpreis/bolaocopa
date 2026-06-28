@@ -48,7 +48,7 @@ func (n *Notifier) PartidaAcabou(ctx context.Context, targetJID, homeTeam string
 	} else {
 		msg += "🏆 *Pontuaram:*\n"
 		for _, w := range winners {
-			msg += fmt.Sprintf("• %s — %d pts\n", w.Name, w.Pontos)
+			msg += fmt.Sprintf("• %s — %.1f pts\n", w.Name, w.Pontos)
 		}
 	}
 
@@ -89,5 +89,5 @@ func (n *Notifier) PartidaIniciando(ctx context.Context, targetJID, homeTeam, aw
 
 type Winner struct {
 	Name   string
-	Pontos int
+	Pontos float64
 }
