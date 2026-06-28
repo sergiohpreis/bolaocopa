@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sergiohpreis/bolaocopa/backend/internal/repository"
 )
@@ -19,6 +18,7 @@ var (
 	ErrPalpiteNaoEncontrado    = errors.New("palpite not found")
 	ErrPalpiteJaAprovado       = errors.New("palpite já aprovado: não pode ser alterado retroativamente")
 	ErrRetroativoDesabilitado  = errors.New("palpites retroativos desabilitados neste bolão")
+	ErrPenaltyWinnerInvalido   = errors.New("penalty_winner must be 'home', 'away', or empty")
 )
 
 type PalpiteService struct {
@@ -69,9 +69,8 @@ func (s *PalpiteService) Upsert(ctx context.Context, bolaoID, userID, jogoID str
 		return repository.Palpite{}, ErrPalpiteFechado
 	}
 
-	var pw pgtype.Text
-	if penaltyWinner != "" {
-		pw = pgtype.Text{String: penaltyWinner, Valid: true}
+	if penaltyWinner != "" && penaltyWinner != "home" && penaltyWinner != "away" {
+		return repository.Palpite{}, ErrPenaltyWinnerInvalido
 	}
 	p, err := s.q.UpsertPalpite(ctx, repository.UpsertPalpiteParams{
 		BolaoID:       bid,
@@ -79,7 +78,7 @@ func (s *PalpiteService) Upsert(ctx context.Context, bolaoID, userID, jogoID str
 		JogoID:        jid,
 		HomeScore:     int32(homeScore),
 		AwayScore:     int32(awayScore),
-		PenaltyWinner: pw,
+		PenaltyWinner: optText(penaltyWinner),
 	})
 	if err != nil {
 		return p, err
@@ -176,9 +175,8 @@ func (s *PalpiteService) UpsertRetroativo(ctx context.Context, bolaoID, userID, 
 		return repository.Palpite{}, ErrJogoAindaAberto
 	}
 
-	var pw pgtype.Text
-	if penaltyWinner != "" {
-		pw = pgtype.Text{String: penaltyWinner, Valid: true}
+	if penaltyWinner != "" && penaltyWinner != "home" && penaltyWinner != "away" {
+		return repository.Palpite{}, ErrPenaltyWinnerInvalido
 	}
 	p, err := s.q.UpsertPalpiteRetroativo(ctx, repository.UpsertPalpiteRetroativoParams{
 		BolaoID:       bid,
@@ -186,7 +184,7 @@ func (s *PalpiteService) UpsertRetroativo(ctx context.Context, bolaoID, userID, 
 		JogoID:        jid,
 		HomeScore:     int32(homeScore),
 		AwayScore:     int32(awayScore),
-		PenaltyWinner: pw,
+		PenaltyWinner: optText(penaltyWinner),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

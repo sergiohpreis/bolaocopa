@@ -26,6 +26,10 @@ func parseUUID(s string) (pgtype.UUID, error) {
 	return u, nil
 }
 
+func optText(s string) pgtype.Text {
+	return pgtype.Text{String: s, Valid: s != ""}
+}
+
 func numericToString(n pgtype.Numeric) (string, error) {
 	if !n.Valid {
 		return "", nil

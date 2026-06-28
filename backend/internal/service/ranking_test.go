@@ -64,6 +64,34 @@ func TestCalcPontos(t *testing.T) {
 			penaltyWinner: "",
 			want:          3.0 * 3.0, // 9
 		},
+		// Fase de grupos: penalty_winner não deve afetar pontuação
+		{
+			name:          "fase de grupos: placar exato (penalty_winner ignorado)",
+			palHome:       2, palAway: 1,
+			resHome: 2, resAway: 1,
+			stage:         "GROUP_STAGE",
+			apiWinner:     "",
+			penaltyWinner: "home",
+			want:          10,
+		},
+		{
+			name:          "fase de grupos: acertou vencedor",
+			palHome:       2, palAway: 0,
+			resHome: 3, resAway: 1,
+			stage:         "GROUP_STAGE",
+			apiWinner:     "",
+			penaltyWinner: "",
+			want:          3,
+		},
+		{
+			name:          "fase de grupos: errou resultado",
+			palHome:       1, palAway: 0,
+			resHome: 0, resAway: 1,
+			stage:         "GROUP_STAGE",
+			apiWinner:     "",
+			penaltyWinner: "",
+			want:          0,
+		},
 	}
 
 	for _, tt := range tests {
