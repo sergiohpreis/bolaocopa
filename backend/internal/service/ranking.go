@@ -95,7 +95,7 @@ func (s *RankingService) NotifyRecentlyFinished(ctx context.Context, jogos []rep
 			var winners []WAWinner
 			for _, r := range palpites {
 				if pts, ok := numericToFloat64(r.Pontos); ok && pts > 0 {
-					winners = append(winners, WAWinner{Name: r.UserName, Pontos: int(pts)})
+					winners = append(winners, WAWinner{Name: r.UserName, Pontos: pts})
 				}
 			}
 
@@ -151,6 +151,12 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 	boloesComPalpiteNovo := map[string]bool{}
 	jogoIDStr := uuidToString(jogo.ID)
 
+	if jogo.Stage != "GROUP_STAGE" {
+		if _, known := stageMultiplier[jogo.Stage]; !known {
+			slog.Warn("unknown knockout stage, scoring as group stage", "stage", jogo.Stage, "jogo_id", jogo.ID)
+		}
+	}
+
 	for _, p := range palpites {
 		pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32, jogo.Stage, jogo.Winner.String)
 
@@ -158,7 +164,7 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 		// idempotent so it can run every sync. When the jogo's final score is
 		// corrected (e.g. an annulled goal), the recomputed value differs and we
 		// update in place, healing stale pontos.
-		if stored, ok := numericToFloat64(p.Pontos); ok && stored == pontos {
+		if stored, ok := numericToFloat64(p.Pontos); ok && fmt.Sprintf("%.1f", stored) == fmt.Sprintf("%.1f", pontos) {
 			continue
 		}
 		pontosNumeric, err := float64ToNumeric(pontos)
@@ -195,6 +201,9 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 	return nil
 }
 
+// stageMultiplier maps football-data.org stage strings to point multipliers.
+// LAST_16 and ROUND_OF_16 are both mapped — the API uses different strings
+// depending on the tournament edition (e.g. Copa 2026 vs earlier World Cups).
 var stageMultiplier = map[string]float64{
 	"LAST_32":        1.5,
 	"LAST_16":        2.0,
@@ -209,13 +218,13 @@ func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner strin
 	mult, isKnockout := stageMultiplier[stage]
 
 	if isKnockout {
-		if palHome == resHome && palAway == resAway {
-			return 10.0 * mult
-		}
-		// Em pênaltis, apiWinner ("HOME_TEAM"/"AWAY_TEAM") decide quem avançou.
-		// Sem pênaltis, apiWinner reflete o placar de 90'.
 		palSide := palSideWinner(palHome, palAway)
-		if palSide != "" && palSide == apiWinner {
+		// apiWinner ("HOME_TEAM"/"AWAY_TEAM") decide quem avançou — resolve pênaltis.
+		// Placar exato só pontua mais quando o lado chutado também avançou.
+		if palSide != "" && apiWinner != "" && palSide == apiWinner {
+			if palHome == resHome && palAway == resAway {
+				return 10.0 * mult
+			}
 			return 3.0 * mult
 		}
 		return 0

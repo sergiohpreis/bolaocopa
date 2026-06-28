@@ -21,7 +21,7 @@ type WANotifier interface {
 
 type WAWinner struct {
 	Name   string
-	Pontos int
+	Pontos float64
 }
 
 // httpWANotifier is the real implementation — calls the whatsapp service HTTP API.
