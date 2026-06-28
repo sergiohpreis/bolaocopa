@@ -251,6 +251,9 @@
             <span class="outro-sep">–</span>
             <span class="outro-num">{{ p.away_score }}</span>
           </div>
+          <span v-if="p.penalty_winner && isMataMata(jogo.stage)" class="outro-pen-badge">
+            PEN: {{ p.penalty_winner === 'home' ? traduzTime(jogo.home_team) : traduzTime(jogo.away_team) }}
+          </span>
           <div v-if="p.pontos !== undefined && p.pontos !== null" class="outro-pontos" :class="pontosClass(p.pontos)">
             +{{ p.pontos }}
           </div>
@@ -815,6 +818,20 @@ function formatTime(iso: string) {
   border-radius: 4px;
   padding: 2px 6px;
   white-space: nowrap;
+}
+
+/* Badge de pênaltis na lista dos outros palpites */
+.outro-pen-badge {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: rgba(255,200,60,0.8);
+  background: rgba(255,200,60,0.07);
+  border: 1px solid rgba(255,200,60,0.25);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Transição suave de entrada/saída do seletor */
