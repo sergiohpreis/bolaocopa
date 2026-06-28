@@ -38,53 +38,55 @@
     <div class="palpite-row">
       <!-- Active input -->
       <template v-if="!jogo.finished && !isClosed && jogoDefinido(jogo)">
-        <div class="palpite-input-group">
-          <div class="score-input-wrap">
-            <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
-            <span class="score-display">{{ homeInput }}</span>
-            <button class="score-adj" @click="homeInput = (homeInput ?? 0) + 1">+</button>
-          </div>
-          <span class="score-vs">×</span>
-          <div class="score-input-wrap">
-            <button class="score-adj" @click="awayInput = Math.max(0, (awayInput ?? 0) - 1)">−</button>
-            <span class="score-display">{{ awayInput }}</span>
-            <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
-          </div>
-          <button
-            class="save-btn ready"
-            :class="{ saved: isSaved }"
-            :disabled="!canSave"
-            @click="emit('save', homeInput, awayInput, showPenaltyPicker ? penaltyWinnerInput : null)"
-          >
-            <span class="font-display" style="font-size: 0.75rem; letter-spacing: 0.1em;">{{ isSaved ? 'SALVO' : 'SALVAR' }}</span>
-          </button>
-        </div>
-        <Transition name="penalty-picker">
-          <div v-if="showPenaltyPicker" class="penalty-picker">
-            <span class="penalty-label">PÊNALTIS — QUEM AVANÇA?</span>
-            <div class="penalty-btns" role="group" aria-label="Quem avança nos pênaltis?">
-              <button
-                class="penalty-btn"
-                :class="{ active: penaltyWinnerInput === 'home' }"
-                :aria-pressed="penaltyWinnerInput === 'home'"
-                @click="penaltyWinnerInput = 'home'"
-              >
-                <img v-if="jogo.home_team_flag" :src="jogo.home_team_flag" class="penalty-flag" alt="" />
-                <span>{{ traduzTime(jogo.home_team) }}</span>
-              </button>
-              <span class="penalty-divider">|</span>
-              <button
-                class="penalty-btn"
-                :class="{ active: penaltyWinnerInput === 'away' }"
-                :aria-pressed="penaltyWinnerInput === 'away'"
-                @click="penaltyWinnerInput = 'away'"
-              >
-                <span>{{ traduzTime(jogo.away_team) }}</span>
-                <img v-if="jogo.away_team_flag" :src="jogo.away_team_flag" class="penalty-flag" alt="" />
-              </button>
+        <div class="palpite-input-block">
+          <div class="palpite-input-group">
+            <div class="score-input-wrap">
+              <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
+              <span class="score-display">{{ homeInput }}</span>
+              <button class="score-adj" @click="homeInput = (homeInput ?? 0) + 1">+</button>
             </div>
+            <span class="score-vs">×</span>
+            <div class="score-input-wrap">
+              <button class="score-adj" @click="awayInput = Math.max(0, (awayInput ?? 0) - 1)">−</button>
+              <span class="score-display">{{ awayInput }}</span>
+              <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
+            </div>
+            <button
+              class="save-btn ready"
+              :class="{ saved: isSaved }"
+              :disabled="!canSave"
+              @click="emit('save', homeInput, awayInput, showPenaltyPicker ? penaltyWinnerInput : null)"
+            >
+              <span class="font-display" style="font-size: 0.75rem; letter-spacing: 0.1em;">{{ isSaved ? 'SALVO' : 'SALVAR' }}</span>
+            </button>
           </div>
-        </Transition>
+          <Transition name="penalty-picker">
+            <div v-if="showPenaltyPicker" class="penalty-picker">
+              <span class="penalty-label">PÊNALTIS — QUEM AVANÇA?</span>
+              <div class="penalty-btns" role="group" aria-label="Quem avança nos pênaltis?">
+                <button
+                  class="penalty-btn"
+                  :class="{ active: penaltyWinnerInput === 'home' }"
+                  :aria-pressed="penaltyWinnerInput === 'home'"
+                  @click="penaltyWinnerInput = 'home'"
+                >
+                  <img v-if="jogo.home_team_flag" :src="jogo.home_team_flag" class="penalty-flag" alt="" />
+                  <span>{{ traduzTime(jogo.home_team) }}</span>
+                </button>
+                <span class="penalty-divider">|</span>
+                <button
+                  class="penalty-btn"
+                  :class="{ active: penaltyWinnerInput === 'away' }"
+                  :aria-pressed="penaltyWinnerInput === 'away'"
+                  @click="penaltyWinnerInput = 'away'"
+                >
+                  <span>{{ traduzTime(jogo.away_team) }}</span>
+                  <img v-if="jogo.away_team_flag" :src="jogo.away_team_flag" class="penalty-flag" alt="" />
+                </button>
+              </div>
+            </div>
+          </Transition>
+        </div>
       </template>
 
       <!-- Palpite pendente (aguardando aprovação) -->
@@ -121,23 +123,24 @@
 
       <!-- Palpite rejeitado -->
       <template v-else-if="palpite && palpite.status === 'rejeitado'">
-        <div class="palpite-input-group">
-          <div class="score-input-wrap">
-            <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
-            <span class="score-display">{{ homeInput }}</span>
-            <button class="score-adj" @click="homeInput = (homeInput ?? 0) + 1">+</button>
+        <div class="palpite-input-block">
+          <div class="palpite-input-group">
+            <div class="score-input-wrap">
+              <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
+              <span class="score-display">{{ homeInput }}</span>
+              <button class="score-adj" @click="homeInput = (homeInput ?? 0) + 1">+</button>
+            </div>
+            <span class="score-vs">×</span>
+            <div class="score-input-wrap">
+              <button class="score-adj" @click="awayInput = Math.max(0, (awayInput ?? 0) - 1)">−</button>
+              <span class="score-display">{{ awayInput }}</span>
+              <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
+            </div>
+            <button class="save-btn retro" :disabled="!canSave" @click="emit('saveRetroativo', homeInput, awayInput, showPenaltyPicker ? penaltyWinnerInput : null)">
+              <span class="font-display" style="font-size: 0.7rem; letter-spacing: 0.08em;">REENVIAR</span>
+            </button>
           </div>
-          <span class="score-vs">×</span>
-          <div class="score-input-wrap">
-            <button class="score-adj" @click="awayInput = Math.max(0, (awayInput ?? 0) - 1)">−</button>
-            <span class="score-display">{{ awayInput }}</span>
-            <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
-          </div>
-          <button class="save-btn retro" :disabled="!canSave" @click="emit('saveRetroativo', homeInput, awayInput, showPenaltyPicker ? penaltyWinnerInput : null)">
-            <span class="font-display" style="font-size: 0.7rem; letter-spacing: 0.08em;">REENVIAR</span>
-          </button>
-        </div>
-        <Transition name="penalty-picker">
+          <Transition name="penalty-picker">
           <div v-if="showPenaltyPicker" class="penalty-picker">
             <span class="penalty-label">PÊNALTIS — QUEM AVANÇA?</span>
             <div class="penalty-btns" role="group" aria-label="Quem avança nos pênaltis?">
@@ -162,8 +165,9 @@
               </button>
             </div>
           </div>
-        </Transition>
-        <div class="rejected-hint">palpite anterior rejeitado pelo admin</div>
+          </Transition>
+          <div class="rejected-hint">palpite anterior rejeitado pelo admin</div>
+        </div>
       </template>
 
       <!-- Jogo sem times definidos: aguardando confronto -->
@@ -178,48 +182,50 @@
 
       <!-- Retroativo: jogo fechado, sem palpite, e retroativo habilitado -->
       <template v-else-if="(isClosed || jogo.finished) && retroativoEnabled">
-        <div class="palpite-input-group">
-          <div class="score-input-wrap">
-            <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
-            <span class="score-display">{{ homeInput }}</span>
-            <button class="score-adj" @click="homeInput = (homeInput ?? 0) + 1">+</button>
-          </div>
-          <span class="score-vs">×</span>
-          <div class="score-input-wrap">
-            <button class="score-adj" @click="awayInput = Math.max(0, (awayInput ?? 0) - 1)">−</button>
-            <span class="score-display">{{ awayInput }}</span>
-            <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
-          </div>
-          <button class="save-btn retro" :disabled="!canSave" @click="emit('saveRetroativo', homeInput, awayInput, showPenaltyPicker ? penaltyWinnerInput : null)">
-            <span class="font-display" style="font-size: 0.7rem; letter-spacing: 0.08em;">ENVIAR</span>
-          </button>
-        </div>
-        <Transition name="penalty-picker">
-          <div v-if="showPenaltyPicker" class="penalty-picker">
-            <span class="penalty-label">PÊNALTIS — QUEM AVANÇA?</span>
-            <div class="penalty-btns" role="group" aria-label="Quem avança nos pênaltis?">
-              <button
-                class="penalty-btn"
-                :class="{ active: penaltyWinnerInput === 'home' }"
-                :aria-pressed="penaltyWinnerInput === 'home'"
-                @click="penaltyWinnerInput = 'home'"
-              >
-                <img v-if="jogo.home_team_flag" :src="jogo.home_team_flag" class="penalty-flag" alt="" />
-                <span>{{ traduzTime(jogo.home_team) }}</span>
-              </button>
-              <span class="penalty-divider">|</span>
-              <button
-                class="penalty-btn"
-                :class="{ active: penaltyWinnerInput === 'away' }"
-                :aria-pressed="penaltyWinnerInput === 'away'"
-                @click="penaltyWinnerInput = 'away'"
-              >
-                <span>{{ traduzTime(jogo.away_team) }}</span>
-                <img v-if="jogo.away_team_flag" :src="jogo.away_team_flag" class="penalty-flag" alt="" />
-              </button>
+        <div class="palpite-input-block">
+          <div class="palpite-input-group">
+            <div class="score-input-wrap">
+              <button class="score-adj" @click="homeInput = Math.max(0, (homeInput ?? 0) - 1)">−</button>
+              <span class="score-display">{{ homeInput }}</span>
+              <button class="score-adj" @click="homeInput = (homeInput ?? 0) + 1">+</button>
             </div>
+            <span class="score-vs">×</span>
+            <div class="score-input-wrap">
+              <button class="score-adj" @click="awayInput = Math.max(0, (awayInput ?? 0) - 1)">−</button>
+              <span class="score-display">{{ awayInput }}</span>
+              <button class="score-adj" @click="awayInput = (awayInput ?? 0) + 1">+</button>
+            </div>
+            <button class="save-btn retro" :disabled="!canSave" @click="emit('saveRetroativo', homeInput, awayInput, showPenaltyPicker ? penaltyWinnerInput : null)">
+              <span class="font-display" style="font-size: 0.7rem; letter-spacing: 0.08em;">ENVIAR</span>
+            </button>
           </div>
-        </Transition>
+          <Transition name="penalty-picker">
+            <div v-if="showPenaltyPicker" class="penalty-picker">
+              <span class="penalty-label">PÊNALTIS — QUEM AVANÇA?</span>
+              <div class="penalty-btns" role="group" aria-label="Quem avança nos pênaltis?">
+                <button
+                  class="penalty-btn"
+                  :class="{ active: penaltyWinnerInput === 'home' }"
+                  :aria-pressed="penaltyWinnerInput === 'home'"
+                  @click="penaltyWinnerInput = 'home'"
+                >
+                  <img v-if="jogo.home_team_flag" :src="jogo.home_team_flag" class="penalty-flag" alt="" />
+                  <span>{{ traduzTime(jogo.home_team) }}</span>
+                </button>
+                <span class="penalty-divider">|</span>
+                <button
+                  class="penalty-btn"
+                  :class="{ active: penaltyWinnerInput === 'away' }"
+                  :aria-pressed="penaltyWinnerInput === 'away'"
+                  @click="penaltyWinnerInput = 'away'"
+                >
+                  <span>{{ traduzTime(jogo.away_team) }}</span>
+                  <img v-if="jogo.away_team_flag" :src="jogo.away_team_flag" class="penalty-flag" alt="" />
+                </button>
+              </div>
+            </div>
+          </Transition>
+        </div>
       </template>
     </div>
 
@@ -468,11 +474,18 @@ function formatTime(iso: string) {
   justify-content: center;
 }
 
+.palpite-input-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 0;
+}
+
 .palpite-input-group {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
   justify-content: center;
 }
 .score-input-wrap {
