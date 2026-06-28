@@ -26,6 +26,7 @@
               </div>
             </li>
           </ul>
+          <router-link to="/como-funciona" class="rules-link" @click="dismiss">Ver todas as regras →</router-link>
           <button class="cta-btn font-display" @click="dismiss">BORA!</button>
         </div>
       </div>
@@ -166,6 +167,17 @@ function dismiss() {
   transition: background 0.2s;
 }
 .cta-btn:hover { background: rgba(57, 255, 106, 0.2); }
+
+.rules-link {
+  display: block;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  margin-bottom: 10px;
+  transition: color 0.2s;
+}
+.rules-link:hover { color: var(--neon); }
 
 /* Transition */
 .modal-enter-active, .modal-leave-active { transition: opacity 0.25s ease; }

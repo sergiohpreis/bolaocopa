@@ -44,8 +44,63 @@
         </div>
       </section>
 
-      <!-- Prazo -->
+      <!-- Mata-mata -->
       <section class="section animate-fade-up stagger-2">
+        <h2 class="section-title">MATA-MATA — PONTUAÇÃO POR FASE</h2>
+        <div class="info-card" style="margin-bottom: 12px;">
+          <div class="info-icon">⚡</div>
+          <div>
+            <p class="info-text">No mata-mata, os pontos base da fase de grupos são multiplicados conforme a fase. Quanto mais longe no torneio, mais vale cada acerto.</p>
+          </div>
+        </div>
+        <div class="knockout-table">
+          <div class="kt-row kt-header">
+            <span>Fase</span>
+            <span class="text-center">Mult.</span>
+            <span class="text-center">Vencedor</span>
+            <span class="text-center">Placar exato</span>
+          </div>
+          <div class="kt-row">
+            <span>16-avos</span>
+            <span class="text-center text-muted">1.5×</span>
+            <span class="text-center">4.5</span>
+            <span class="text-center">15</span>
+          </div>
+          <div class="kt-row">
+            <span>Oitavas</span>
+            <span class="text-center text-muted">2×</span>
+            <span class="text-center">6</span>
+            <span class="text-center">20</span>
+          </div>
+          <div class="kt-row">
+            <span>Quartas</span>
+            <span class="text-center text-muted">2.5×</span>
+            <span class="text-center">7.5</span>
+            <span class="text-center">25</span>
+          </div>
+          <div class="kt-row">
+            <span>Semis</span>
+            <span class="text-center text-muted">3×</span>
+            <span class="text-center">9</span>
+            <span class="text-center">30</span>
+          </div>
+          <div class="kt-row kt-final">
+            <span>Final / 3º lugar</span>
+            <span class="text-center text-muted">3.5×</span>
+            <span class="text-center">10.5</span>
+            <span class="text-center">35</span>
+          </div>
+        </div>
+        <div class="info-card" style="margin-top: 12px;">
+          <div class="info-icon">🎯</div>
+          <div>
+            <p class="info-text">O palpite é sempre o <strong>placar do tempo normal (90')</strong>. Se o jogo for para os pênaltis, quem acertou o placar de 90' pontua — mesmo sem saber quem ia avançar nos pênaltis. Ex: você apostou <strong>1×1</strong>, o jogo terminou 1×1 e foi decidido nos pênaltis — você ganha os pontos de "vencedor" multiplicados pela fase.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Prazo -->
+      <section class="section animate-fade-up stagger-3">
         <h2 class="section-title">PRAZO PARA APOSTAR</h2>
         <div class="info-card">
           <div class="info-icon">⏰</div>
@@ -56,7 +111,7 @@
       </section>
 
       <!-- Como entrar -->
-      <section class="section animate-fade-up stagger-3">
+      <section class="section animate-fade-up stagger-4">
         <h2 class="section-title">COMO ENTRAR NO BOLÃO</h2>
         <div class="steps">
           <div class="step">
@@ -233,6 +288,32 @@ const router = useRouter()
   line-height: 1.6;
 }
 .info-text strong { color: rgba(255,255,255,0.9); font-weight: 600; }
+
+/* Knockout table */
+.knockout-table {
+  border: 1px solid rgba(57,255,106,0.15);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.kt-row {
+  display: grid;
+  grid-template-columns: 1fr 0.5fr 0.7fr 0.9fr;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.75);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.kt-row:last-child { border-bottom: none; }
+.kt-header {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.03);
+}
+.kt-final { color: var(--neon); }
+.text-center { text-align: center; }
+.text-muted { color: var(--text-muted); }
 
 /* Steps */
 .steps { display: flex; flex-direction: column; gap: 12px; }
