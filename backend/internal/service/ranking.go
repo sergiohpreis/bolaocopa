@@ -158,7 +158,7 @@ func (s *RankingService) scoreJogo(ctx context.Context, jogo repository.Jogo) er
 	}
 
 	for _, p := range palpites {
-		pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32, jogo.Stage, jogo.Winner.String)
+		pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32, jogo.Stage, jogo.Winner.String, p.PenaltyWinner.String)
 
 		// Skip the write when the stored score already matches — keeps the job
 		// idempotent so it can run every sync. When the jogo's final score is
@@ -214,25 +214,27 @@ var stageMultiplier = map[string]float64{
 	"FINAL":          3.5,
 }
 
-func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner string) float64 {
+func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner, penaltyWinner string) float64 {
 	mult, isKnockout := stageMultiplier[stage]
 
 	if isKnockout {
 		palSide := palSideWinner(palHome, palAway)
-		// apiWinner ("HOME_TEAM"/"AWAY_TEAM") decide quem avançou — resolve pênaltis.
-		// Placar exato só pontua mais quando o lado chutado também avançou.
-		// Empate no palpite (palSide=="") também pontua se o jogo foi a pênaltis
-		// (tempo normal empatado) — o participante acertou o placar de 90' e a API
-		// resolve o winner; nesse caso conta como "acertou quem avança".
 		if apiWinner != "" {
 			if palSide != "" && palSide == apiWinner {
+				// Apostou vitória e acertou quem avançou.
 				if palHome == resHome && palAway == resAway {
 					return 10.0 * mult
 				}
 				return 3.0 * mult
 			}
 			if palSide == "" && palHome == resHome && palAway == resAway {
-				// Chutou empate, o tempo normal terminou empatado, jogo foi a pênaltis.
+				// Apostou empate exato e o jogo foi a pênaltis.
+				// penaltyWinner ("home"/"away") indica quem o participante escolheu para avançar.
+				// NULL (string vazia) ocorre em palpites antigos — tratado como erro de vencedor.
+				if (penaltyWinner == "home" && apiWinner == "HOME_TEAM") ||
+					(penaltyWinner == "away" && apiWinner == "AWAY_TEAM") {
+					return 10.0*mult + 3.0
+				}
 				return 3.0 * mult
 			}
 		}

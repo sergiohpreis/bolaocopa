@@ -4,10 +4,10 @@
       <div v-if="show" class="overlay" @click.self="dismiss">
         <div class="modal">
           <div class="modal-header">
-            <span class="version-badge font-display">v1.5.0</span>
+            <span class="version-badge font-display">v1.6.0</span>
             <button class="close-btn" @click="dismiss">×</button>
           </div>
-          <h2 class="modal-title font-display">PONTUAÇÃO DO MATA-MATA</h2>
+          <h2 class="modal-title font-display">PALPITE DE PÊNALTIS</h2>
           <p class="modal-subtitle">O que há de novo</p>
 
           <ul class="changes">
@@ -19,10 +19,10 @@
               </div>
             </li>
             <li class="change-item">
-              <span class="change-icon">🎯</span>
+              <span class="change-icon">🥅</span>
               <div>
-                <div class="change-title">Pênaltis contam</div>
-                <div class="change-desc">O palpite é sempre o placar do tempo normal. Acertou o placar de 90' — mesmo que o jogo vá para os pênaltis — você pontua.</div>
+                <div class="change-title">Palpite no vencedor dos pênaltis</div>
+                <div class="change-desc">Em jogos de mata-mata, quando você aposta empate, agora é obrigatório indicar quem avança nos pênaltis. Acertar vale o placar exato multiplicado + 3 pontos bônus.</div>
               </div>
             </li>
           </ul>
@@ -37,7 +37,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const STORAGE_KEY = 'whats_new_seen_v1.5.0'
+const STORAGE_KEY = 'whats_new_seen_v1.6.0'
 const show = ref(!localStorage.getItem(STORAGE_KEY))
 
 function dismiss() {

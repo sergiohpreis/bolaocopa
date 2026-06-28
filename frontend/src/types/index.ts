@@ -47,6 +47,7 @@ export interface Palpite {
   away_score: number
   pontos?: number
   status: 'aprovado' | 'pendente' | 'rejeitado'
+  penalty_winner?: 'home' | 'away' | null
 }
 
 export interface PalpitePendente {
@@ -75,6 +76,7 @@ export interface PalpiteDeJogo {
   home_score: number
   away_score: number
   pontos?: number
+  penalty_winner?: 'home' | 'away' | null
   user_name: string
   user_avatar?: string
 }

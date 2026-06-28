@@ -19,12 +19,15 @@ func NewPalpiteHandler(svc *service.PalpiteService) *PalpiteHandler {
 	return &PalpiteHandler{svc: svc}
 }
 
+type palpiteInput struct {
+	HomeScore     int    `json:"home_score"`
+	AwayScore     int    `json:"away_score"`
+	PenaltyWinner string `json:"penalty_winner"`
+}
+
 // PUT /api/v1/boloes/{id}/palpites/{jogoId}
 func (h *PalpiteHandler) Upsert(w http.ResponseWriter, r *http.Request) {
-	var in struct {
-		HomeScore int `json:"home_score"`
-		AwayScore int `json:"away_score"`
-	}
+	var in palpiteInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		apierror.BadRequest(w, "invalid body")
 		return
@@ -34,10 +37,14 @@ func (h *PalpiteHandler) Upsert(w http.ResponseWriter, r *http.Request) {
 	bolaoID := chi.URLParam(r, "id")
 	jogoID := chi.URLParam(r, "jogoId")
 
-	palpite, err := h.svc.Upsert(r.Context(), bolaoID, userID, jogoID, in.HomeScore, in.AwayScore)
+	palpite, err := h.svc.Upsert(r.Context(), bolaoID, userID, jogoID, in.HomeScore, in.AwayScore, in.PenaltyWinner)
 	if err != nil {
 		if errors.Is(err, service.ErrPalpiteFechado) {
 			apierror.BadRequest(w, "palpite fechado: jogo já começou")
+			return
+		}
+		if errors.Is(err, service.ErrPenaltyWinnerInvalido) {
+			apierror.BadRequest(w, "penalty_winner must be 'home', 'away', or empty")
 			return
 		}
 		if errors.Is(err, service.ErrJogoNotFound) {
@@ -74,10 +81,7 @@ func (h *PalpiteHandler) ListByJogo(w http.ResponseWriter, r *http.Request) {
 
 // PUT /api/v1/boloes/{id}/palpites/{jogoId}/retroativo
 func (h *PalpiteHandler) UpsertRetroativo(w http.ResponseWriter, r *http.Request) {
-	var in struct {
-		HomeScore int `json:"home_score"`
-		AwayScore int `json:"away_score"`
-	}
+	var in palpiteInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		apierror.BadRequest(w, "invalid body")
 		return
@@ -87,8 +91,12 @@ func (h *PalpiteHandler) UpsertRetroativo(w http.ResponseWriter, r *http.Request
 	bolaoID := chi.URLParam(r, "id")
 	jogoID := chi.URLParam(r, "jogoId")
 
-	palpite, err := h.svc.UpsertRetroativo(r.Context(), bolaoID, userID, jogoID, in.HomeScore, in.AwayScore)
+	palpite, err := h.svc.UpsertRetroativo(r.Context(), bolaoID, userID, jogoID, in.HomeScore, in.AwayScore, in.PenaltyWinner)
 	if err != nil {
+		if errors.Is(err, service.ErrPenaltyWinnerInvalido) {
+			apierror.BadRequest(w, "penalty_winner must be 'home', 'away', or empty")
+			return
+		}
 		if errors.Is(err, service.ErrRetroativoDesabilitado) {
 			apierror.BadRequest(w, "palpites retroativos desabilitados neste bolão")
 			return

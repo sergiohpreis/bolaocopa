@@ -92,9 +92,13 @@
           </div>
         </div>
         <div class="info-card" style="margin-top: 12px;">
-          <div class="info-icon">🎯</div>
+          <div class="info-icon">🥅</div>
           <div>
-            <p class="info-text">O palpite é sempre o <strong>placar do tempo normal (90')</strong>. Se o jogo for para os pênaltis, quem acertou o placar de 90' pontua — mesmo sem saber quem ia avançar nos pênaltis. Ex: você apostou <strong>1×1</strong>, o jogo terminou 1×1 e foi decidido nos pênaltis — você ganha os pontos de "vencedor" multiplicados pela fase.</p>
+            <p class="info-text">O palpite é sempre o <strong>placar do tempo normal (90')</strong>. Em jogos que vão para os pênaltis, ao apostar empate você deve indicar qual time avança:</p>
+            <ul style="margin-top: 8px; padding-left: 16px; font-size: 0.82rem; color: rgba(255,255,255,0.65); line-height: 1.8;">
+              <li>Acertou o placar <strong>+ indicou o classificado correto</strong> → placar exato × fase <strong>+ 3 bônus</strong></li>
+              <li>Acertou o placar <strong>+ indicou o time errado</strong> → pontos de "vencedor" × fase</li>
+            </ul>
           </div>
         </div>
       </section>

@@ -15,7 +15,7 @@ const atualizarStatusPalpite = `-- name: AtualizarStatusPalpite :one
 UPDATE palpites
 SET status = $3, updated_at = NOW()
 WHERE id = $1 AND bolao_id = $2 AND status = 'pendente'
-RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status
+RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status, penalty_winner
 `
 
 type AtualizarStatusPalpiteParams struct {
@@ -38,6 +38,7 @@ func (q *Queries) AtualizarStatusPalpite(ctx context.Context, arg AtualizarStatu
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
+		&i.PenaltyWinner,
 	)
 	return i, err
 }
@@ -57,7 +58,7 @@ func (q *Queries) DeletePalpite(ctx context.Context, arg DeletePalpiteParams) er
 }
 
 const getPalpiteByID = `-- name: GetPalpiteByID :one
-SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status FROM palpites WHERE id = $1 AND bolao_id = $2
+SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status, penalty_winner FROM palpites WHERE id = $1 AND bolao_id = $2
 `
 
 type GetPalpiteByIDParams struct {
@@ -79,6 +80,7 @@ func (q *Queries) GetPalpiteByID(ctx context.Context, arg GetPalpiteByIDParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
+		&i.PenaltyWinner,
 	)
 	return i, err
 }
@@ -133,7 +135,7 @@ func (q *Queries) GetRanking(ctx context.Context, bolaoID pgtype.UUID) ([]GetRan
 }
 
 const listPalpitesByBolaoAndJogo = `-- name: ListPalpitesByBolaoAndJogo :many
-SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, u.name AS user_name, u.avatar_url AS user_avatar
+SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, p.penalty_winner, u.name AS user_name, u.avatar_url AS user_avatar
 FROM palpites p
 JOIN users u ON u.id = p.user_id
 WHERE p.bolao_id = $1 AND p.jogo_id = $2 AND p.status = 'aprovado'
@@ -145,18 +147,19 @@ type ListPalpitesByBolaoAndJogoParams struct {
 }
 
 type ListPalpitesByBolaoAndJogoRow struct {
-	ID         pgtype.UUID        `json:"id"`
-	BolaoID    pgtype.UUID        `json:"bolao_id"`
-	UserID     pgtype.UUID        `json:"user_id"`
-	JogoID     pgtype.UUID        `json:"jogo_id"`
-	HomeScore  int32              `json:"home_score"`
-	AwayScore  int32              `json:"away_score"`
-	Pontos     pgtype.Numeric     `json:"pontos"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	Status     string             `json:"status"`
-	UserName   string             `json:"user_name"`
-	UserAvatar pgtype.Text        `json:"user_avatar"`
+	ID            pgtype.UUID        `json:"id"`
+	BolaoID       pgtype.UUID        `json:"bolao_id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	JogoID        pgtype.UUID        `json:"jogo_id"`
+	HomeScore     int32              `json:"home_score"`
+	AwayScore     int32              `json:"away_score"`
+	Pontos        pgtype.Numeric     `json:"pontos"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	Status        string             `json:"status"`
+	PenaltyWinner pgtype.Text        `json:"penalty_winner"`
+	UserName      string             `json:"user_name"`
+	UserAvatar    pgtype.Text        `json:"user_avatar"`
 }
 
 func (q *Queries) ListPalpitesByBolaoAndJogo(ctx context.Context, arg ListPalpitesByBolaoAndJogoParams) ([]ListPalpitesByBolaoAndJogoRow, error) {
@@ -179,6 +182,7 @@ func (q *Queries) ListPalpitesByBolaoAndJogo(ctx context.Context, arg ListPalpit
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
+			&i.PenaltyWinner,
 			&i.UserName,
 			&i.UserAvatar,
 		); err != nil {
@@ -193,7 +197,7 @@ func (q *Queries) ListPalpitesByBolaoAndJogo(ctx context.Context, arg ListPalpit
 }
 
 const listPalpitesByBolaoAndUser = `-- name: ListPalpitesByBolaoAndUser :many
-SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status FROM palpites WHERE bolao_id = $1 AND user_id = $2 ORDER BY created_at ASC
+SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status, penalty_winner FROM palpites WHERE bolao_id = $1 AND user_id = $2 ORDER BY created_at ASC
 `
 
 type ListPalpitesByBolaoAndUserParams struct {
@@ -221,6 +225,7 @@ func (q *Queries) ListPalpitesByBolaoAndUser(ctx context.Context, arg ListPalpit
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
+			&i.PenaltyWinner,
 		); err != nil {
 			return nil, err
 		}
@@ -233,7 +238,7 @@ func (q *Queries) ListPalpitesByBolaoAndUser(ctx context.Context, arg ListPalpit
 }
 
 const listPalpitesByJogo = `-- name: ListPalpitesByJogo :many
-SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status FROM palpites WHERE jogo_id = $1 AND status = 'aprovado'
+SELECT id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status, penalty_winner FROM palpites WHERE jogo_id = $1 AND status = 'aprovado'
 `
 
 func (q *Queries) ListPalpitesByJogo(ctx context.Context, jogoID pgtype.UUID) ([]Palpite, error) {
@@ -256,6 +261,7 @@ func (q *Queries) ListPalpitesByJogo(ctx context.Context, jogoID pgtype.UUID) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
+			&i.PenaltyWinner,
 		); err != nil {
 			return nil, err
 		}
@@ -268,7 +274,7 @@ func (q *Queries) ListPalpitesByJogo(ctx context.Context, jogoID pgtype.UUID) ([
 }
 
 const listPalpitesPendentes = `-- name: ListPalpitesPendentes :many
-SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, u.name AS user_name, j.home_team, j.away_team, j.starts_at, j.finished, j.home_score AS jogo_home_score, j.away_score AS jogo_away_score
+SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, p.penalty_winner, u.name AS user_name, j.home_team, j.away_team, j.starts_at, j.finished, j.home_score AS jogo_home_score, j.away_score AS jogo_away_score
 FROM palpites p
 JOIN users u ON u.id = p.user_id
 JOIN jogos j ON j.id = p.jogo_id
@@ -287,6 +293,7 @@ type ListPalpitesPendentesRow struct {
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	Status        string             `json:"status"`
+	PenaltyWinner pgtype.Text        `json:"penalty_winner"`
 	UserName      string             `json:"user_name"`
 	HomeTeam      string             `json:"home_team"`
 	AwayTeam      string             `json:"away_team"`
@@ -316,6 +323,7 @@ func (q *Queries) ListPalpitesPendentes(ctx context.Context, bolaoID pgtype.UUID
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
+			&i.PenaltyWinner,
 			&i.UserName,
 			&i.HomeTeam,
 			&i.AwayTeam,
@@ -335,7 +343,7 @@ func (q *Queries) ListPalpitesPendentes(ctx context.Context, bolaoID pgtype.UUID
 }
 
 const listPalpitesRetroativosAprovados = `-- name: ListPalpitesRetroativosAprovados :many
-SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, u.name AS user_name, j.home_team, j.away_team, j.starts_at, j.finished, j.home_score AS jogo_home_score, j.away_score AS jogo_away_score
+SELECT p.id, p.bolao_id, p.user_id, p.jogo_id, p.home_score, p.away_score, p.pontos, p.created_at, p.updated_at, p.status, p.penalty_winner, u.name AS user_name, j.home_team, j.away_team, j.starts_at, j.finished, j.home_score AS jogo_home_score, j.away_score AS jogo_away_score
 FROM palpites p
 JOIN users u ON u.id = p.user_id
 JOIN jogos j ON j.id = p.jogo_id
@@ -354,6 +362,7 @@ type ListPalpitesRetroativosAprovadosRow struct {
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	Status        string             `json:"status"`
+	PenaltyWinner pgtype.Text        `json:"penalty_winner"`
 	UserName      string             `json:"user_name"`
 	HomeTeam      string             `json:"home_team"`
 	AwayTeam      string             `json:"away_team"`
@@ -383,6 +392,7 @@ func (q *Queries) ListPalpitesRetroativosAprovados(ctx context.Context, bolaoID 
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
+			&i.PenaltyWinner,
 			&i.UserName,
 			&i.HomeTeam,
 			&i.AwayTeam,
@@ -424,21 +434,23 @@ func (q *Queries) UpdatePalpitePontos(ctx context.Context, arg UpdatePalpitePont
 }
 
 const upsertPalpite = `-- name: UpsertPalpite :one
-INSERT INTO palpites (bolao_id, user_id, jogo_id, home_score, away_score)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO palpites (bolao_id, user_id, jogo_id, home_score, away_score, penalty_winner)
+VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (bolao_id, user_id, jogo_id) DO UPDATE
     SET home_score = EXCLUDED.home_score,
         away_score = EXCLUDED.away_score,
+        penalty_winner = EXCLUDED.penalty_winner,
         updated_at = NOW()
-RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status
+RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status, penalty_winner
 `
 
 type UpsertPalpiteParams struct {
-	BolaoID   pgtype.UUID `json:"bolao_id"`
-	UserID    pgtype.UUID `json:"user_id"`
-	JogoID    pgtype.UUID `json:"jogo_id"`
-	HomeScore int32       `json:"home_score"`
-	AwayScore int32       `json:"away_score"`
+	BolaoID       pgtype.UUID `json:"bolao_id"`
+	UserID        pgtype.UUID `json:"user_id"`
+	JogoID        pgtype.UUID `json:"jogo_id"`
+	HomeScore     int32       `json:"home_score"`
+	AwayScore     int32       `json:"away_score"`
+	PenaltyWinner pgtype.Text `json:"penalty_winner"`
 }
 
 func (q *Queries) UpsertPalpite(ctx context.Context, arg UpsertPalpiteParams) (Palpite, error) {
@@ -448,6 +460,7 @@ func (q *Queries) UpsertPalpite(ctx context.Context, arg UpsertPalpiteParams) (P
 		arg.JogoID,
 		arg.HomeScore,
 		arg.AwayScore,
+		arg.PenaltyWinner,
 	)
 	var i Palpite
 	err := row.Scan(
@@ -461,28 +474,31 @@ func (q *Queries) UpsertPalpite(ctx context.Context, arg UpsertPalpiteParams) (P
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
+		&i.PenaltyWinner,
 	)
 	return i, err
 }
 
 const upsertPalpiteRetroativo = `-- name: UpsertPalpiteRetroativo :one
-INSERT INTO palpites (bolao_id, user_id, jogo_id, home_score, away_score, status)
-VALUES ($1, $2, $3, $4, $5, 'pendente')
+INSERT INTO palpites (bolao_id, user_id, jogo_id, home_score, away_score, status, penalty_winner)
+VALUES ($1, $2, $3, $4, $5, 'pendente', $6)
 ON CONFLICT (bolao_id, user_id, jogo_id) DO UPDATE
     SET home_score = EXCLUDED.home_score,
         away_score = EXCLUDED.away_score,
         status = 'pendente',
+        penalty_winner = EXCLUDED.penalty_winner,
         updated_at = NOW()
 WHERE palpites.status != 'aprovado'
-RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status
+RETURNING id, bolao_id, user_id, jogo_id, home_score, away_score, pontos, created_at, updated_at, status, penalty_winner
 `
 
 type UpsertPalpiteRetroativoParams struct {
-	BolaoID   pgtype.UUID `json:"bolao_id"`
-	UserID    pgtype.UUID `json:"user_id"`
-	JogoID    pgtype.UUID `json:"jogo_id"`
-	HomeScore int32       `json:"home_score"`
-	AwayScore int32       `json:"away_score"`
+	BolaoID       pgtype.UUID `json:"bolao_id"`
+	UserID        pgtype.UUID `json:"user_id"`
+	JogoID        pgtype.UUID `json:"jogo_id"`
+	HomeScore     int32       `json:"home_score"`
+	AwayScore     int32       `json:"away_score"`
+	PenaltyWinner pgtype.Text `json:"penalty_winner"`
 }
 
 // When the conflict row has status='aprovado', the WHERE clause causes Postgres to skip
@@ -495,6 +511,7 @@ func (q *Queries) UpsertPalpiteRetroativo(ctx context.Context, arg UpsertPalpite
 		arg.JogoID,
 		arg.HomeScore,
 		arg.AwayScore,
+		arg.PenaltyWinner,
 	)
 	var i Palpite
 	err := row.Scan(
@@ -508,6 +525,7 @@ func (q *Queries) UpsertPalpiteRetroativo(ctx context.Context, arg UpsertPalpite
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
+		&i.PenaltyWinner,
 	)
 	return i, err
 }
