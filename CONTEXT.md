@@ -51,7 +51,7 @@ Valor atribuído a um Palpite após o Resultado ser conhecido. Pode ser decimal 
 
 Multiplicadores: 16-avos 1.5×, Oitavas 2×, Quartas 2.5×, Semis 3×, Final 3.5×.
 
-Jogos decididos nos pênaltis: o vencedor é determinado pelo campo `winner` da API externa — não pelo placar do tempo normal. Assim, um palpite de `2×0` para o Brasil conta como "acertou quem avança" se o Brasil passar, mesmo que o placar tenha sido `1×1` com pênaltis.
+Jogos decididos nos pênaltis: o vencedor é determinado pelo campo `winner` da API externa. Um palpite de `2×0` para o Brasil conta como "acertou quem avança" se o Brasil passar, mesmo que o placar tenha sido `1×1`. Um palpite de `1×1` (empate) também conta como "acertou quem avança" se o tempo normal terminou `1×1` e o jogo foi a pênaltis — o participante acertou o placar de 90' e a API resolve o avanço.
 
 Palpite não registrado: 0 pontos (equivalente a errar).
 _Avoid_: peso por fase, bônus de fase

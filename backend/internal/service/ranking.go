@@ -221,11 +221,20 @@ func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner strin
 		palSide := palSideWinner(palHome, palAway)
 		// apiWinner ("HOME_TEAM"/"AWAY_TEAM") decide quem avançou — resolve pênaltis.
 		// Placar exato só pontua mais quando o lado chutado também avançou.
-		if palSide != "" && apiWinner != "" && palSide == apiWinner {
-			if palHome == resHome && palAway == resAway {
-				return 10.0 * mult
+		// Empate no palpite (palSide=="") também pontua se o jogo foi a pênaltis
+		// (tempo normal empatado) — o participante acertou o placar de 90' e a API
+		// resolve o winner; nesse caso conta como "acertou quem avança".
+		if apiWinner != "" {
+			if palSide != "" && palSide == apiWinner {
+				if palHome == resHome && palAway == resAway {
+					return 10.0 * mult
+				}
+				return 3.0 * mult
 			}
-			return 3.0 * mult
+			if palSide == "" && palHome == resHome && palAway == resAway {
+				// Chutou empate, o tempo normal terminou empatado, jogo foi a pênaltis.
+				return 3.0 * mult
+			}
 		}
 		return 0
 	}
