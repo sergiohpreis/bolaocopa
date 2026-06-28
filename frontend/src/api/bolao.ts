@@ -36,10 +36,12 @@ export async function upsertPalpite(
   jogoId: string,
   homeScore: number,
   awayScore: number,
+  penaltyWinner?: 'home' | 'away' | null,
 ): Promise<Palpite> {
   const { data } = await http.put<Palpite>(`/boloes/${bolaoId}/palpites/${jogoId}`, {
     home_score: homeScore,
     away_score: awayScore,
+    penalty_winner: penaltyWinner ?? null,
   })
   return data
 }
@@ -49,10 +51,12 @@ export async function upsertPalpiteRetroativo(
   jogoId: string,
   homeScore: number,
   awayScore: number,
+  penaltyWinner?: 'home' | 'away' | null,
 ): Promise<Palpite> {
   const { data } = await http.put<Palpite>(`/boloes/${bolaoId}/palpites/${jogoId}/retroativo`, {
     home_score: homeScore,
     away_score: awayScore,
+    penalty_winner: penaltyWinner ?? null,
   })
   return data
 }

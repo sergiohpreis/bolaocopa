@@ -105,16 +105,17 @@ type JogoNotification struct {
 }
 
 type Palpite struct {
-	ID        pgtype.UUID        `json:"id"`
-	BolaoID   pgtype.UUID        `json:"bolao_id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	JogoID    pgtype.UUID        `json:"jogo_id"`
-	HomeScore int32              `json:"home_score"`
-	AwayScore int32              `json:"away_score"`
-	Pontos    pgtype.Numeric     `json:"pontos"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-	Status    string             `json:"status"`
+	ID            pgtype.UUID        `json:"id"`
+	BolaoID       pgtype.UUID        `json:"bolao_id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	JogoID        pgtype.UUID        `json:"jogo_id"`
+	HomeScore     int32              `json:"home_score"`
+	AwayScore     int32              `json:"away_score"`
+	Pontos        pgtype.Numeric     `json:"pontos"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	Status        string             `json:"status"`
+	PenaltyWinner pgtype.Text        `json:"penalty_winner"`
 }
 
 type Participante struct {

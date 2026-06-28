@@ -244,8 +244,8 @@
                 :palpite="palpiteMap[jogo.id]"
                 :bolao-id="bolaoId"
                 :retroativo-enabled="bolao?.retroativo_enabled ?? false"
-                @save="(h, a) => savePalpite(jogo.id, h, a)"
-                @save-retroativo="(h, a) => savePalpiteRetroativo(jogo.id, h, a)"
+                @save="(h, a, pw) => savePalpite(jogo.id, h, a, pw)"
+                @save-retroativo="(h, a, pw) => savePalpiteRetroativo(jogo.id, h, a, pw)"
               />
             </div>
           </div>
@@ -284,8 +284,8 @@
                   :palpite="palpiteMap[jogo.id]"
                   :bolao-id="bolaoId"
                   :retroativo-enabled="bolao?.retroativo_enabled ?? false"
-                  @save="(h, a) => savePalpite(jogo.id, h, a)"
-                  @save-retroativo="(h, a) => savePalpiteRetroativo(jogo.id, h, a)"
+                  @save="(h, a, pw) => savePalpite(jogo.id, h, a, pw)"
+                  @save-retroativo="(h, a, pw) => savePalpiteRetroativo(jogo.id, h, a, pw)"
                 />
               </div>
             </div>
@@ -429,9 +429,9 @@ onMounted(async () => {
   }
 })
 
-async function savePalpite(jogoId: string, home: number, away: number) {
+async function savePalpite(jogoId: string, home: number, away: number, penaltyWinner?: 'home' | 'away' | null) {
   try {
-    const p = await upsertPalpite(bolaoId, jogoId, home, away)
+    const p = await upsertPalpite(bolaoId, jogoId, home, away, penaltyWinner)
     const idx = palpites.value.findIndex((x) => x.jogo_id === jogoId)
     if (idx >= 0) palpites.value[idx] = p
     else palpites.value.push(p)
@@ -441,9 +441,9 @@ async function savePalpite(jogoId: string, home: number, away: number) {
   }
 }
 
-async function savePalpiteRetroativo(jogoId: string, home: number, away: number) {
+async function savePalpiteRetroativo(jogoId: string, home: number, away: number, penaltyWinner?: 'home' | 'away' | null) {
   try {
-    const p = await upsertPalpiteRetroativo(bolaoId, jogoId, home, away)
+    const p = await upsertPalpiteRetroativo(bolaoId, jogoId, home, away, penaltyWinner)
     const idx = palpites.value.findIndex((x) => x.jogo_id === jogoId)
     if (idx >= 0) palpites.value[idx] = p
     else palpites.value.push(p)

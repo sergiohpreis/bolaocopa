@@ -1,9 +1,10 @@
 -- name: UpsertPalpite :one
-INSERT INTO palpites (bolao_id, user_id, jogo_id, home_score, away_score)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO palpites (bolao_id, user_id, jogo_id, home_score, away_score, penalty_winner)
+VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (bolao_id, user_id, jogo_id) DO UPDATE
     SET home_score = EXCLUDED.home_score,
         away_score = EXCLUDED.away_score,
+        penalty_winner = EXCLUDED.penalty_winner,
         updated_at = NOW()
 RETURNING *;
 
@@ -27,12 +28,13 @@ WHERE bolao_id = $2 AND jogo_id = $3 AND user_id = $4;
 -- When the conflict row has status='aprovado', the WHERE clause causes Postgres to skip
 -- the DO UPDATE, and RETURNING emits 0 rows. pgx surfaces this as pgx.ErrNoRows,
 -- which the service maps to ErrPalpiteJaAprovado.
-INSERT INTO palpites (bolao_id, user_id, jogo_id, home_score, away_score, status)
-VALUES ($1, $2, $3, $4, $5, 'pendente')
+INSERT INTO palpites (bolao_id, user_id, jogo_id, home_score, away_score, status, penalty_winner)
+VALUES ($1, $2, $3, $4, $5, 'pendente', $6)
 ON CONFLICT (bolao_id, user_id, jogo_id) DO UPDATE
     SET home_score = EXCLUDED.home_score,
         away_score = EXCLUDED.away_score,
         status = 'pendente',
+        penalty_winner = EXCLUDED.penalty_winner,
         updated_at = NOW()
 WHERE palpites.status != 'aprovado'
 RETURNING *;

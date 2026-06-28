@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sergiohpreis/bolaocopa/backend/internal/repository"
 )
@@ -34,7 +35,7 @@ func (s *PalpiteService) SetFeed(feed *FeedService) {
 	s.feed = feed
 }
 
-func (s *PalpiteService) Upsert(ctx context.Context, bolaoID, userID, jogoID string, homeScore, awayScore int) (repository.Palpite, error) {
+func (s *PalpiteService) Upsert(ctx context.Context, bolaoID, userID, jogoID string, homeScore, awayScore int, penaltyWinner string) (repository.Palpite, error) {
 	bid, err := parseUUID(bolaoID)
 	if err != nil {
 		return repository.Palpite{}, ErrBolaoNotFound
@@ -68,12 +69,17 @@ func (s *PalpiteService) Upsert(ctx context.Context, bolaoID, userID, jogoID str
 		return repository.Palpite{}, ErrPalpiteFechado
 	}
 
+	var pw pgtype.Text
+	if penaltyWinner != "" {
+		pw = pgtype.Text{String: penaltyWinner, Valid: true}
+	}
 	p, err := s.q.UpsertPalpite(ctx, repository.UpsertPalpiteParams{
-		BolaoID:   bid,
-		UserID:    uid,
-		JogoID:    jid,
-		HomeScore: int32(homeScore),
-		AwayScore: int32(awayScore),
+		BolaoID:       bid,
+		UserID:        uid,
+		JogoID:        jid,
+		HomeScore:     int32(homeScore),
+		AwayScore:     int32(awayScore),
+		PenaltyWinner: pw,
 	})
 	if err != nil {
 		return p, err
@@ -85,8 +91,9 @@ func (s *PalpiteService) Upsert(ctx context.Context, bolaoID, userID, jogoID str
 		}
 		jogoIDStr := jogoID
 		s.feed.InsertEvento(ctx, bolaoID, tipo, &userID, &jogoIDStr, map[string]any{
-			"home_score": homeScore,
-			"away_score": awayScore,
+			"home_score":     homeScore,
+			"away_score":     awayScore,
+			"penalty_winner": penaltyWinner,
 		})
 	}
 	return p, nil
@@ -124,7 +131,7 @@ func (s *PalpiteService) ListByJogo(ctx context.Context, bolaoID, userID, jogoID
 	return items, nil
 }
 
-func (s *PalpiteService) UpsertRetroativo(ctx context.Context, bolaoID, userID, jogoID string, homeScore, awayScore int) (repository.Palpite, error) {
+func (s *PalpiteService) UpsertRetroativo(ctx context.Context, bolaoID, userID, jogoID string, homeScore, awayScore int, penaltyWinner string) (repository.Palpite, error) {
 	bid, err := parseUUID(bolaoID)
 	if err != nil {
 		return repository.Palpite{}, ErrBolaoNotFound
@@ -169,12 +176,17 @@ func (s *PalpiteService) UpsertRetroativo(ctx context.Context, bolaoID, userID, 
 		return repository.Palpite{}, ErrJogoAindaAberto
 	}
 
+	var pw pgtype.Text
+	if penaltyWinner != "" {
+		pw = pgtype.Text{String: penaltyWinner, Valid: true}
+	}
 	p, err := s.q.UpsertPalpiteRetroativo(ctx, repository.UpsertPalpiteRetroativoParams{
-		BolaoID:   bid,
-		UserID:    uid,
-		JogoID:    jid,
-		HomeScore: int32(homeScore),
-		AwayScore: int32(awayScore),
+		BolaoID:       bid,
+		UserID:        uid,
+		JogoID:        jid,
+		HomeScore:     int32(homeScore),
+		AwayScore:     int32(awayScore),
+		PenaltyWinner: pw,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -270,7 +282,7 @@ func (s *PalpiteService) AprovarOuRejeitar(ctx context.Context, bolaoID, palpite
 		// Se o jogo já terminou, calcular e persistir pontos imediatamente na mesma transação.
 		jogo, err := qtx.GetJogoByID(ctx, p.JogoID)
 		if err == nil && jogo.Finished && jogo.HomeScore.Valid && jogo.AwayScore.Valid {
-			pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32, jogo.Stage, jogo.Winner.String)
+			pontos := calcPontos(p.HomeScore, p.AwayScore, jogo.HomeScore.Int32, jogo.AwayScore.Int32, jogo.Stage, jogo.Winner.String, p.PenaltyWinner.String)
 			pontosNumeric, err := float64ToNumeric(pontos)
 			if err != nil {
 				return repository.Palpite{}, fmt.Errorf("converting pontos: %w", err)

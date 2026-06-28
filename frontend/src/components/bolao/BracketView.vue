@@ -14,8 +14,8 @@
           :palpite="palpiteMap[jogo.id]"
           :bolao-id="bolaoId"
           :retroativo-enabled="retroativoEnabled"
-          @save="(h, a) => emit('save', jogo.id, h, a)"
-          @save-retroativo="(h, a) => emit('saveRetroativo', jogo.id, h, a)"
+          @save="(h, a, pw) => emit('save', jogo.id, h, a, pw)"
+          @save-retroativo="(h, a, pw) => emit('saveRetroativo', jogo.id, h, a, pw)"
         />
         <div v-if="coluna.vagas > 0" class="bracket-tbd">
           {{ coluna.vagas }} {{ coluna.vagas === 1 ? 'CONFRONTO' : 'CONFRONTOS' }} A DEFINIR
@@ -44,8 +44,8 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'save', jogoId: string, home: number, away: number): void
-  (e: 'saveRetroativo', jogoId: string, home: number, away: number): void
+  (e: 'save', jogoId: string, home: number, away: number, penaltyWinner: 'home' | 'away' | null): void
+  (e: 'saveRetroativo', jogoId: string, home: number, away: number, penaltyWinner: 'home' | 'away' | null): void
 }>()
 </script>
 
