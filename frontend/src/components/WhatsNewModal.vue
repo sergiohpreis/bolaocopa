@@ -22,7 +22,7 @@
               <span class="change-icon">🎯</span>
               <div>
                 <div class="change-title">Pênaltis contam</div>
-                <div class="change-desc">Quem você chutou para avançar é o que vale — mesmo que o jogo vá para os pênaltis.</div>
+                <div class="change-desc">O palpite é sempre o placar do tempo normal. Acertou o placar de 90' — mesmo que o jogo vá para os pênaltis — você pontua.</div>
               </div>
             </li>
           </ul>
