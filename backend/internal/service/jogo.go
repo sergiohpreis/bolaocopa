@@ -95,9 +95,17 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 		homeScore := pgtype.Int4{}
 		awayScore := pgtype.Int4{}
 		winner := pgtype.Text{}
-		if finished && m.Score.FullTime.Home != nil && m.Score.FullTime.Away != nil {
-			homeScore = pgtype.Int4{Int32: int32(*m.Score.FullTime.Home), Valid: true}
-			awayScore = pgtype.Int4{Int32: int32(*m.Score.FullTime.Away), Valid: true}
+		if finished {
+			// For penalty shootout matches, fullTime includes the penalty goals on top
+			// of regulation — use regularTime for the display/scoring score.
+			scoreGoals := m.Score.FullTime
+			if m.Score.Duration == "PENALTY_SHOOTOUT" && m.Score.RegularTime.Home != nil && m.Score.RegularTime.Away != nil {
+				scoreGoals = m.Score.RegularTime
+			}
+			if scoreGoals.Home != nil && scoreGoals.Away != nil {
+				homeScore = pgtype.Int4{Int32: int32(*scoreGoals.Home), Valid: true}
+				awayScore = pgtype.Int4{Int32: int32(*scoreGoals.Away), Valid: true}
+			}
 			if m.Score.Winner != "" {
 				winner = pgtype.Text{String: m.Score.Winner, Valid: true}
 			}
@@ -217,8 +225,10 @@ type fdTeam struct {
 }
 
 type fdScore struct {
-	Winner   string  `json:"winner"`
-	FullTime fdGoals `json:"fullTime"`
+	Winner      string  `json:"winner"`
+	Duration    string  `json:"duration"`
+	FullTime    fdGoals `json:"fullTime"`
+	RegularTime fdGoals `json:"regularTime"`
 }
 
 type fdGoals struct {
