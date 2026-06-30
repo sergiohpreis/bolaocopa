@@ -219,6 +219,8 @@ func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner, pena
 
 	if isKnockout {
 		palSide := palSideWinner(palHome, palAway)
+		penaltyCorrect := (penaltyWinner == "home" && apiWinner == "HOME_TEAM") ||
+			(penaltyWinner == "away" && apiWinner == "AWAY_TEAM")
 		if apiWinner != "" {
 			if palSide != "" && palSide == apiWinner {
 				// Apostou vitória e acertou quem avançou.
@@ -227,15 +229,20 @@ func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner, pena
 				}
 				return 3.0 * mult
 			}
-			if palSide == "" && palHome == resHome && palAway == resAway {
-				// Apostou empate exato e o jogo foi a pênaltis.
+			if palSide == "" {
+				// Apostou empate — jogo foi a pênaltis.
 				// penaltyWinner ("home"/"away") indica quem o participante escolheu para avançar.
-				// NULL (string vazia) ocorre em palpites antigos — tratado como erro de vencedor.
-				if (penaltyWinner == "home" && apiWinner == "HOME_TEAM") ||
-					(penaltyWinner == "away" && apiWinner == "AWAY_TEAM") {
-					return 10.0*mult + 3.0
+				if palHome == resHome && palAway == resAway {
+					// Acertou o placar exato do empate.
+					if penaltyCorrect {
+						return 10.0*mult + 3.0
+					}
+					return 3.0 * mult
 				}
-				return 3.0 * mult
+				// Errou o placar mas acertou quem avança nos pênaltis — vale tanto quanto acertar o vencedor com placar errado.
+				if penaltyCorrect {
+					return 3.0 * mult
+				}
 			}
 		}
 		return 0
