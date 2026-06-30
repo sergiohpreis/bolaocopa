@@ -137,10 +137,15 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 		//   1. !finished → finished (first fim-de-jogo)
 		//   2. already finished but the final score changed (e.g. an annulled goal)
 		// WasFinished/WasHomeScore/WasAwayScore come from the CTE reading pre-upsert state.
+		//
+		// For knockout matches we wait until winner is populated — the API sometimes
+		// sets FINISHED before filling winner, and the WA message would show wrong points.
 		scoreChanged := upserted.HomeScore != upserted.WasHomeScore || upserted.AwayScore != upserted.WasAwayScore
 		newlyFinished := upserted.Finished && !upserted.WasFinished
 		correctedScore := upserted.Finished && upserted.WasFinished && scoreChanged
-		if (newlyFinished || correctedScore) && upserted.HomeScore.Valid && upserted.AwayScore.Valid {
+		_, isKnockout := stageMultiplier[m.Stage]
+		winnerReady := !isKnockout || upserted.Winner.Valid
+		if (newlyFinished || correctedScore) && upserted.HomeScore.Valid && upserted.AwayScore.Valid && winnerReady {
 			recentlyFinished = append(recentlyFinished, repository.Jogo{
 				ID:         upserted.ID,
 				ExternalID: upserted.ExternalID,
