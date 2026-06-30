@@ -150,7 +150,7 @@ ON CONFLICT (external_id) DO UPDATE
         home_score     = EXCLUDED.home_score,
         away_score     = EXCLUDED.away_score,
         finished       = EXCLUDED.finished,
-        winner         = EXCLUDED.winner,
+        winner         = COALESCE(EXCLUDED.winner, jogos.winner),
         updated_at     = NOW()
 RETURNING id, external_id, home_team, away_team, home_team_flag, away_team_flag, starts_at, stage, home_score, away_score, finished, created_at, updated_at, winner,
     (SELECT COALESCE(finished, FALSE) FROM before) AS was_finished,
