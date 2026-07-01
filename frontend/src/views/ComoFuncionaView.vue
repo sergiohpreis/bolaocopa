@@ -96,8 +96,10 @@
           <div>
             <p class="info-text">O palpite é sempre o <strong>placar do tempo normal (90')</strong>. Em jogos que vão para os pênaltis, ao apostar empate você deve indicar qual time avança:</p>
             <ul style="margin-top: 8px; padding-left: 16px; font-size: 0.82rem; color: rgba(255,255,255,0.65); line-height: 1.8;">
-              <li>Acertou o placar <strong>+ indicou o classificado correto</strong> → placar exato × fase <strong>+ 3 bônus</strong></li>
-              <li>Acertou o placar <strong>+ indicou o time errado</strong> → pontos de "vencedor" × fase</li>
+              <li>Acertou o placar exato <strong>+ indicou o classificado correto</strong> → placar exato × fase <strong>+ 3 bônus</strong></li>
+              <li>Acertou o placar exato <strong>+ indicou o time errado</strong> → pontos de "vencedor" × fase</li>
+              <li>Apostou empate (qualquer placar) <strong>+ indicou o classificado correto</strong> → pontos de "vencedor" × fase</li>
+              <li>Apostou empate (qualquer placar) <strong>sem acertar o classificado</strong> → pontos de "vencedor" × fase</li>
             </ul>
           </div>
         </div>
