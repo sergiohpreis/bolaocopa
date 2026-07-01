@@ -239,10 +239,9 @@ func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner, pena
 					}
 					return 3.0 * mult
 				}
-				// Errou o placar mas acertou quem avança nos pênaltis — vale tanto quanto acertar o vencedor com placar errado.
-				if penaltyCorrect {
-					return 3.0 * mult
-				}
+				// Errou o placar exato mas apostou empate (qualquer placar x-x) —
+				// acertar o resultado vale 3*mult, igual a acertar o vencedor com placar errado.
+				return 3.0 * mult
 			}
 		}
 		return 0
