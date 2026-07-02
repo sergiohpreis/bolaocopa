@@ -242,7 +242,7 @@ func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner, pena
 					if penaltyCorrect {
 						return 10.0*mult + 3.0
 					}
-					return 3.0 * mult
+					return 10.0 * mult
 				}
 				// Errou o placar exato mas apostou empate — acertou o resultado.
 				if penaltyCorrect {

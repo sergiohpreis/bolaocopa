@@ -24,7 +24,7 @@ func TestCalcPontos(t *testing.T) {
 			penaltyWinner: "home",
 			want:          10.0*2.5 + 3.0, // 28
 		},
-		// Mata-mata: empate exato + errou penalty winner
+		// Mata-mata: empate exato + errou penalty winner → 10×mult (placar exato vale, sem bônus)
 		{
 			name:          "empate exato + errou penalty winner",
 			palHome:       1, palAway: 1,
@@ -32,9 +32,9 @@ func TestCalcPontos(t *testing.T) {
 			stage:         "QUARTER_FINALS",
 			apiWinner:     "HOME_TEAM",
 			penaltyWinner: "away",
-			want:          3.0 * 2.5, // 7.5
+			want:          10.0 * 2.5, // 25
 		},
-		// Mata-mata: empate exato + penalty_winner NULL (palpite antigo, pré-feature)
+		// Mata-mata: empate exato + penalty_winner NULL (palpite antigo, pré-feature) → 10×mult
 		{
 			name:          "empate exato + penalty_winner null (palpite antigo)",
 			palHome:       1, palAway: 1,
@@ -42,7 +42,7 @@ func TestCalcPontos(t *testing.T) {
 			stage:         "QUARTER_FINALS",
 			apiWinner:     "HOME_TEAM",
 			penaltyWinner: "",
-			want:          3.0 * 2.5, // 7.5
+			want:          10.0 * 2.5, // 25
 		},
 		// Regressão: vitória exata no mata-mata (sem pênaltis)
 		{
