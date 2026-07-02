@@ -138,6 +138,7 @@ interface WANotifyFimDeJogo extends WANotifyBase {
 
 interface WANotifyMatchEvent extends WANotifyBase {
   type: 'faltam_dez_minutos' | 'partida_iniciando'
+  pendentes?: string[]
 }
 
 export type WANotifyPayload = WANotifyFimDeJogo | WANotifyMatchEvent

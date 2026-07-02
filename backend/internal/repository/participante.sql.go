@@ -96,3 +96,45 @@ func (q *Queries) ListParticipantesByBolao(ctx context.Context, bolaoID pgtype.U
 	}
 	return items, nil
 }
+
+const listParticipantesSemPalpite = `-- name: ListParticipantesSemPalpite :many
+SELECT u.id AS user_id, u.name AS user_name
+FROM participantes pt
+JOIN users u ON u.id = pt.user_id
+WHERE pt.bolao_id = $1
+  AND NOT EXISTS (
+    SELECT 1 FROM palpites p
+    WHERE p.bolao_id = pt.bolao_id AND p.jogo_id = $2 AND p.user_id = pt.user_id
+  )
+ORDER BY u.name ASC
+`
+
+type ListParticipantesSemPalpiteParams struct {
+	BolaoID pgtype.UUID `json:"bolao_id"`
+	JogoID  pgtype.UUID `json:"jogo_id"`
+}
+
+type ListParticipantesSemPalpiteRow struct {
+	UserID   pgtype.UUID `json:"user_id"`
+	UserName string      `json:"user_name"`
+}
+
+func (q *Queries) ListParticipantesSemPalpite(ctx context.Context, arg ListParticipantesSemPalpiteParams) ([]ListParticipantesSemPalpiteRow, error) {
+	rows, err := q.db.Query(ctx, listParticipantesSemPalpite, arg.BolaoID, arg.JogoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListParticipantesSemPalpiteRow
+	for rows.Next() {
+		var i ListParticipantesSemPalpiteRow
+		if err := rows.Scan(&i.UserID, &i.UserName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

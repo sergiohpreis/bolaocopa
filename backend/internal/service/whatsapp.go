@@ -15,7 +15,7 @@ import (
 // the whatsapp service's globally linked group (useful for healthchecks/tests).
 type WANotifier interface {
 	NotifyFimDeJogo(ctx context.Context, groupJID, homeTeam string, homeScore int, awayTeam string, awayScore int, winners []WAWinner)
-	NotifyFaltamDezMinutos(ctx context.Context, groupJID, homeTeam, awayTeam string)
+	NotifyFaltamDezMinutos(ctx context.Context, groupJID, homeTeam, awayTeam string, pendentes []string)
 	NotifyPartidaIniciando(ctx context.Context, groupJID, homeTeam, awayTeam string)
 }
 
@@ -46,7 +46,7 @@ func NewNoopWANotifier() WANotifier { return &noopWANotifier{} }
 
 func (n *noopWANotifier) NotifyFimDeJogo(_ context.Context, _, _ string, _ int, _ string, _ int, _ []WAWinner) {
 }
-func (n *noopWANotifier) NotifyFaltamDezMinutos(_ context.Context, _, _, _ string) {}
+func (n *noopWANotifier) NotifyFaltamDezMinutos(_ context.Context, _, _, _ string, _ []string) {}
 func (n *noopWANotifier) NotifyPartidaIniciando(_ context.Context, _, _, _ string) {}
 
 func (n *httpWANotifier) NotifyFimDeJogo(ctx context.Context, groupJID, homeTeam string, homeScore int, awayTeam string, awayScore int, winners []WAWinner) {
@@ -64,11 +64,12 @@ func (n *httpWANotifier) NotifyFimDeJogo(ctx context.Context, groupJID, homeTeam
 	})
 }
 
-func (n *httpWANotifier) NotifyFaltamDezMinutos(ctx context.Context, groupJID, homeTeam, awayTeam string) {
+func (n *httpWANotifier) NotifyFaltamDezMinutos(ctx context.Context, groupJID, homeTeam, awayTeam string, pendentes []string) {
 	n.post(ctx, groupJID, map[string]any{
 		"type":      "faltam_dez_minutos",
 		"home_team": homeTeam,
 		"away_team": awayTeam,
+		"pendentes": pendentes,
 	})
 }
 
