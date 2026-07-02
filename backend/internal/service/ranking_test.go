@@ -124,12 +124,22 @@ func TestCalcPontos(t *testing.T) {
 		},
 		// Regressão: bug1 com vitória home
 		{
-			name:          "bug1: apostou empate, resultado vitória home no tempo normal",
+			name:          "bug1: apostou empate, resultado vitória home no tempo normal (QUARTER_FINALS)",
 			palHome:       2, palAway: 2,
 			resHome: 2, resAway: 0,
 			stage:         "QUARTER_FINALS",
 			apiWinner:     "HOME_TEAM",
 			penaltyWinner: "home",
+			want:          0,
+		},
+		// Apostou vencedor errado no mata-mata → 0 pts
+		{
+			name:          "apostou vencedor errado no mata-mata",
+			palHome:       2, palAway: 0,
+			resHome: 0, resAway: 1,
+			stage:         "SEMI_FINALS",
+			apiWinner:     "AWAY_TEAM",
+			penaltyWinner: "",
 			want:          0,
 		},
 	}
