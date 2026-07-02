@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type Sender interface {
@@ -57,16 +58,18 @@ func (n *Notifier) PartidaAcabou(ctx context.Context, targetJID, homeTeam string
 
 // FaltamDezMinutos envia lembrete antes da partida.
 // targetJID: JID do grupo destino; se vazio usa o grupo global vinculado.
-func (n *Notifier) FaltamDezMinutos(ctx context.Context, targetJID, homeTeam, awayTeam string) error {
+// pendentes: nomes dos participantes que ainda não registraram Palpite; se vazio, omitido da mensagem.
+func (n *Notifier) FaltamDezMinutos(ctx context.Context, targetJID, homeTeam, awayTeam string, pendentes []string) error {
 	jid, err := n.resolveJID(targetJID)
 	if err != nil {
 		return err
 	}
 
-	msg := fmt.Sprintf(
-		"⏰ *Faltam 10 minutos!*\n%s x %s\nFaçam suas apostas antes que a partida comece! 🎯",
-		homeTeam, awayTeam,
-	)
+	msg := fmt.Sprintf("⏰ *Faltam 10 minutos!*\n%s x %s\n", homeTeam, awayTeam)
+	if len(pendentes) > 0 {
+		msg += fmt.Sprintf("Faltam apostar: %s\n", strings.Join(pendentes, ", "))
+	}
+	msg += "Façam suas apostas antes que a partida comece! 🎯"
 
 	return n.sender.SendText(ctx, jid, msg)
 }

@@ -185,18 +185,13 @@ func (s *JogoService) SyncFromAPI(ctx context.Context) ([]repository.Jogo, error
 // The gap [2min, 7min) triggers nothing — intentional, avoids double-alerting.
 // Notifications are sent to all bolões that have a wa_group_jid configured.
 func (s *JogoService) dispatchMatchNotifications(ctx context.Context, jogoID pgtype.UUID, untilStart time.Duration, homeTeam, awayTeam string) {
-	var (
-		notifyFn         func(ctx context.Context, groupJID, homeTeam, awayTeam string)
-		notificationType string
-	)
+	var notificationType string
 
 	switch {
 	case untilStart >= 7*time.Minute && untilStart < 12*time.Minute:
 		notificationType = NotifFaltamDezMinutos
-		notifyFn = s.waNotif.NotifyFaltamDezMinutos
 	case untilStart >= -2*time.Minute && untilStart < 2*time.Minute:
 		notificationType = NotifPartidaIniciando
-		notifyFn = s.waNotif.NotifyPartidaIniciando
 	default:
 		return
 	}
@@ -205,8 +200,25 @@ func (s *JogoService) dispatchMatchNotifications(ctx context.Context, jogoID pgt
 	away := translateTeam(awayTeam)
 	slog.Info("wa notify: dispatching", "type", notificationType, "home", home, "away", away)
 
-	s.notifier.notifyOnce(ctx, jogoID, notificationType, func(ctx context.Context, jid string) {
-		notifyFn(ctx, jid, home, away)
+	s.notifier.notifyOnce(ctx, jogoID, notificationType, func(ctx context.Context, b repository.Bolo) {
+		jid := b.WaGroupJid.String
+		switch notificationType {
+		case NotifFaltamDezMinutos:
+			pendentes, err := s.q.ListParticipantesSemPalpite(ctx, repository.ListParticipantesSemPalpiteParams{
+				BolaoID: b.ID,
+				JogoID:  jogoID,
+			})
+			if err != nil {
+				slog.Warn("wa notify: listing pending bettors", "bolao_id", b.ID, "err", err)
+			}
+			nomes := make([]string, len(pendentes))
+			for i, p := range pendentes {
+				nomes[i] = p.UserName
+			}
+			s.waNotif.NotifyFaltamDezMinutos(ctx, jid, home, away, nomes)
+		case NotifPartidaIniciando:
+			s.waNotif.NotifyPartidaIniciando(ctx, jid, home, away)
+		}
 	})
 }
 

@@ -30,8 +30,8 @@ type matchNotifier struct {
 //
 // Delivery is best-effort at-most-once: the dedup record is committed before sends are
 // dispatched. A transient send failure will NOT be retried on the next sync tick.
-// sendFn receives the bolão JID; it must be non-blocking or handle its own timeout.
-func (n *matchNotifier) notifyOnce(ctx context.Context, jogoID pgtype.UUID, notificationType string, sendFn func(ctx context.Context, jid string)) {
+// sendFn receives the bolão row (JID + bolão ID); it must be non-blocking or handle its own timeout.
+func (n *matchNotifier) notifyOnce(ctx context.Context, jogoID pgtype.UUID, notificationType string, sendFn func(ctx context.Context, b repository.Bolo)) {
 	rows, err := n.q.InsertJogoNotificationIfAbsent(ctx, repository.InsertJogoNotificationIfAbsentParams{
 		JogoID:           jogoID,
 		NotificationType: notificationType,
@@ -54,14 +54,13 @@ func (n *matchNotifier) notifyOnce(ctx context.Context, jogoID pgtype.UUID, noti
 	sem := make(chan struct{}, maxConcurrentSends)
 	var wg sync.WaitGroup
 	for _, b := range boloes {
-		jid := b.WaGroupJid.String
 		wg.Add(1)
 		sem <- struct{}{}
-		go func(jid string) {
+		go func(b repository.Bolo) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			sendFn(ctx, jid)
-		}(jid)
+			sendFn(ctx, b)
+		}(b)
 	}
 	wg.Wait()
 }

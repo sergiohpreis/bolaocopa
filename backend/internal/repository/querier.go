@@ -52,6 +52,7 @@ type Querier interface {
 	ListPalpitesPendentes(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesPendentesRow, error)
 	ListPalpitesRetroativosAprovados(ctx context.Context, bolaoID pgtype.UUID) ([]ListPalpitesRetroativosAprovadosRow, error)
 	ListParticipantesByBolao(ctx context.Context, bolaoID pgtype.UUID) ([]ListParticipantesByBolaoRow, error)
+	ListParticipantesSemPalpite(ctx context.Context, arg ListParticipantesSemPalpiteParams) ([]ListParticipantesSemPalpiteRow, error)
 	ProporTaxa(ctx context.Context, arg ProporTaxaParams) (TaxaEntradaProposta, error)
 	RegenerateInviteToken(ctx context.Context, arg RegenerateInviteTokenParams) (Bolo, error)
 	// ON CONFLICT DO NOTHING: when user already voted, RETURNING yields no rows.

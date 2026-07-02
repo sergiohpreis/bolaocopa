@@ -170,12 +170,13 @@ func main() {
 				return
 			}
 			var body struct {
-				Type      string `json:"type"`
-				TargetJID string `json:"target_jid"`
-				HomeTeam  string `json:"home_team"`
-				AwayTeam  string `json:"away_team"`
-				HomeScore int    `json:"home_score"`
-				AwayScore int    `json:"away_score"`
+				Type      string   `json:"type"`
+				TargetJID string   `json:"target_jid"`
+				HomeTeam  string   `json:"home_team"`
+				AwayTeam  string   `json:"away_team"`
+				HomeScore int      `json:"home_score"`
+				AwayScore int      `json:"away_score"`
+				Pendentes []string `json:"pendentes"`
 				Winners   []struct {
 					Name   string  `json:"name"`
 					Pontos float64 `json:"pontos"`
@@ -195,7 +196,7 @@ func main() {
 				}
 				sendErr = ntfr.PartidaAcabou(r.Context(), body.TargetJID, body.HomeTeam, body.HomeScore, body.AwayTeam, body.AwayScore, ws)
 			case "faltam_dez_minutos":
-				sendErr = ntfr.FaltamDezMinutos(r.Context(), body.TargetJID, body.HomeTeam, body.AwayTeam)
+				sendErr = ntfr.FaltamDezMinutos(r.Context(), body.TargetJID, body.HomeTeam, body.AwayTeam, body.Pendentes)
 			case "partida_iniciando":
 				sendErr = ntfr.PartidaIniciando(r.Context(), body.TargetJID, body.HomeTeam, body.AwayTeam)
 			default:

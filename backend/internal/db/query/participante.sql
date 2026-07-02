@@ -15,3 +15,14 @@ ORDER BY p.joined_at ASC;
 SELECT EXISTS(
     SELECT 1 FROM participantes WHERE bolao_id = $1 AND user_id = $2
 ) AS is_participante;
+
+-- name: ListParticipantesSemPalpite :many
+SELECT u.id AS user_id, u.name AS user_name
+FROM participantes pt
+JOIN users u ON u.id = pt.user_id
+WHERE pt.bolao_id = $1
+  AND NOT EXISTS (
+    SELECT 1 FROM palpites p
+    WHERE p.bolao_id = pt.bolao_id AND p.jogo_id = $2 AND p.user_id = pt.user_id
+  )
+ORDER BY u.name ASC;

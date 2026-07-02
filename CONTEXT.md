@@ -83,5 +83,7 @@ Registro cronológico dos últimos 50 eventos relevantes de um Bolão, específi
 ## Notificação
 Mensagem enviada automaticamente pelo sistema ao Grupo Vinculado de um Bolão. Três tipos: **faltam dez minutos** (aviso para registrar Palpites antes do prazo), **partida iniciando** (apostas encerradas, boa sorte) e **fim de jogo** (placar final e quem pontuou). Disparadas pelo backend a cada ciclo de sincronização. O sistema garante no máximo um envio por tipo por Jogo — registrado na tabela `jogo_notifications` via `INSERT ... ON CONFLICT DO NOTHING`. O Administrador pode pausar ou retomar as Notificações a qualquer momento.
 
+A Notificação **faltam dez minutos** inclui, por Bolão, os nomes dos Participantes que ainda não registraram Palpite para aquele Jogo (calculado no momento do envio). Quando todos já apostaram, a linha é omitida e a mensagem segue normalmente — a Notificação nunca é suprimida por esse motivo.
+
 ## Grupo Vinculado
 Grupo do WhatsApp associado a um Bolão pelo Administrador. Destino de todas as Notificações daquele Bolão. Um Bolão tem no máximo um Grupo Vinculado. O vínculo é configurado pelo Administrador via painel de administração. Notificações de pré-jogo são enviadas para todos os Bolões que têm Grupo Vinculado configurado, independentemente de terem Palpites registrados no Jogo. O envio é feito por um serviço standalone (whatsmeow) chamado pelo backend a cada ciclo de sincronização (5 minutos); as janelas de disparo são [7min, 12min) antes do início para "faltam dez minutos" e [-2min, +2min) para "partida iniciando".
