@@ -100,9 +100,10 @@
               <li><strong>Apostou vitória</strong> e o time avançou, placar errado → <strong>vencedor × fase</strong></li>
               <li><strong>Apostou vitória</strong> mas o time não avançou → <strong>0 pts</strong></li>
               <li><strong>Apostou empate</strong> e o jogo foi decidido no tempo normal → <strong>0 pts</strong></li>
-              <li><strong>Apostou empate</strong>, jogo foi a pênaltis, acertou o classificado + placar exato → <strong>placar exato × fase + 3 bônus</strong></li>
-              <li><strong>Apostou empate</strong>, jogo foi a pênaltis, acertou o classificado → <strong>vencedor × fase + 3 bônus</strong></li>
-              <li><strong>Apostou empate</strong>, jogo foi a pênaltis, errou o classificado → <strong>vencedor × fase</strong></li>
+              <li><strong>Apostou empate</strong>, jogo foi a pênaltis, placar exato + acertou classificado → <strong>placar exato × fase + 3 bônus</strong></li>
+              <li><strong>Apostou empate</strong>, jogo foi a pênaltis, placar exato + errou classificado → <strong>placar exato × fase</strong></li>
+              <li><strong>Apostou empate</strong>, jogo foi a pênaltis, placar errado + acertou classificado → <strong>vencedor × fase + 3 bônus</strong></li>
+              <li><strong>Apostou empate</strong>, jogo foi a pênaltis, placar errado + errou classificado → <strong>vencedor × fase</strong></li>
             </ul>
           </div>
         </div>
