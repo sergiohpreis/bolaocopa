@@ -92,6 +92,46 @@ func TestCalcPontos(t *testing.T) {
 			penaltyWinner: "",
 			want:          0,
 		},
+		// Bug 1: apostou empate, jogo decidido no tempo normal → 0 pts
+		{
+			name:          "bug1: apostou empate, resultado vitória away no tempo normal",
+			palHome:       1, palAway: 1,
+			resHome: 0, resAway: 1,
+			stage:         "LAST_32",
+			apiWinner:     "AWAY_TEAM",
+			penaltyWinner: "away",
+			want:          0,
+		},
+		// Bug 2: apostou empate, jogo a pênaltis, errou placar exato, acertou pênaltis → 3×mult + 3
+		{
+			name:          "bug2: apostou empate (placar errado) + acertou pênaltis",
+			palHome:       0, palAway: 0,
+			resHome: 1, resAway: 1,
+			stage:         "LAST_32",
+			apiWinner:     "AWAY_TEAM",
+			penaltyWinner: "away",
+			want:          3.0*1.5 + 3.0, // 7.5
+		},
+		// Regressão: apostou empate, jogo a pênaltis, errou placar, errou pênaltis → só 3×mult
+		{
+			name:          "regressao: apostou empate (placar errado) + errou pênaltis",
+			palHome:       0, palAway: 0,
+			resHome: 1, resAway: 1,
+			stage:         "LAST_32",
+			apiWinner:     "AWAY_TEAM",
+			penaltyWinner: "home",
+			want:          3.0 * 1.5, // 4.5
+		},
+		// Regressão: bug1 com vitória home
+		{
+			name:          "bug1: apostou empate, resultado vitória home no tempo normal",
+			palHome:       2, palAway: 2,
+			resHome: 2, resAway: 0,
+			stage:         "QUARTER_FINALS",
+			apiWinner:     "HOME_TEAM",
+			penaltyWinner: "home",
+			want:          0,
+		},
 	}
 
 	for _, tt := range tests {

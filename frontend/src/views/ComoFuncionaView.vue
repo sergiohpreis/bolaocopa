@@ -94,12 +94,15 @@
         <div class="info-card" style="margin-top: 12px;">
           <div class="info-icon">🥅</div>
           <div>
-            <p class="info-text">O palpite é sempre o <strong>placar do tempo normal (90')</strong>. Em jogos que vão para os pênaltis, ao apostar empate você deve indicar qual time avança:</p>
-            <ul style="margin-top: 8px; padding-left: 16px; font-size: 0.82rem; color: rgba(255,255,255,0.65); line-height: 1.8;">
-              <li>Acertou o placar exato <strong>+ indicou o classificado correto</strong> → placar exato × fase <strong>+ 3 bônus</strong></li>
-              <li>Acertou o placar exato <strong>+ indicou o time errado</strong> → pontos de "vencedor" × fase</li>
-              <li>Apostou empate (qualquer placar) <strong>+ indicou o classificado correto</strong> → pontos de "vencedor" × fase</li>
-              <li>Apostou empate (qualquer placar) <strong>sem acertar o classificado</strong> → pontos de "vencedor" × fase</li>
+            <p class="info-text">O palpite é sempre o <strong>placar do tempo normal (90')</strong>. Em jogos de mata-mata:</p>
+            <ul style="margin-top: 8px; padding-left: 16px; font-size: 0.82rem; color: rgba(255,255,255,0.65); line-height: 1.9;">
+              <li><strong>Apostou vitória</strong> e o time avançou (no tempo normal ou pênaltis), placar exato → <strong>placar exato × fase</strong></li>
+              <li><strong>Apostou vitória</strong> e o time avançou, placar errado → <strong>vencedor × fase</strong></li>
+              <li><strong>Apostou vitória</strong> mas o time não avançou → <strong>0 pts</strong></li>
+              <li><strong>Apostou empate</strong> e o jogo foi decidido no tempo normal → <strong>0 pts</strong></li>
+              <li><strong>Apostou empate</strong>, jogo foi a pênaltis, acertou o classificado + placar exato → <strong>placar exato × fase + 3 bônus</strong></li>
+              <li><strong>Apostou empate</strong>, jogo foi a pênaltis, acertou o classificado → <strong>vencedor × fase + 3 bônus</strong></li>
+              <li><strong>Apostou empate</strong>, jogo foi a pênaltis, errou o classificado → <strong>vencedor × fase</strong></li>
             </ul>
           </div>
         </div>

@@ -230,8 +230,10 @@ func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner, pena
 				return 3.0 * mult
 			}
 			if palSide == "" {
-				// Apostou empate — jogo foi a pênaltis.
-				// penaltyWinner ("home"/"away") indica quem o participante escolheu para avançar.
+				// Apostou empate — só pontua se o resultado real também foi empate (pênaltis).
+				if resHome != resAway {
+					return 0
+				}
 				if palHome == resHome && palAway == resAway {
 					// Acertou o placar exato do empate.
 					if penaltyCorrect {
@@ -239,8 +241,10 @@ func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner, pena
 					}
 					return 3.0 * mult
 				}
-				// Errou o placar exato mas apostou empate (qualquer placar x-x) —
-				// acertar o resultado vale 3*mult, igual a acertar o vencedor com placar errado.
+				// Errou o placar exato mas apostou empate — acertou o resultado.
+				if penaltyCorrect {
+					return 3.0*mult + 3.0
+				}
 				return 3.0 * mult
 			}
 		}
