@@ -219,8 +219,6 @@ func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner, pena
 
 	if isKnockout {
 		palSide := palSideWinner(palHome, palAway)
-		penaltyCorrect := (penaltyWinner == "home" && apiWinner == "HOME_TEAM") ||
-			(penaltyWinner == "away" && apiWinner == "AWAY_TEAM")
 		if apiWinner != "" {
 			if palSide != "" && palSide == apiWinner {
 				// Apostou vitória e acertou quem avançou.
@@ -230,17 +228,26 @@ func calcPontos(palHome, palAway, resHome, resAway int32, stage, apiWinner, pena
 				return 3.0 * mult
 			}
 			if palSide == "" {
-				// Apostou empate — jogo foi a pênaltis.
-				// penaltyWinner ("home"/"away") indica quem o participante escolheu para avançar.
+				// Apostou empate — só pontua se o resultado real também foi empate.
+				// Em PENALTY_SHOOTOUT, jogo.go armazena o placar do tempo normal (empate),
+				// portanto resHome==resAway é o sinal de que o jogo foi a pênaltis,
+				// e apiWinner carrega o vencedor nos pênaltis (não-vazio).
+				if resHome != resAway {
+					return 0
+				}
+				penaltyCorrect := (penaltyWinner == "home" && apiWinner == "HOME_TEAM") ||
+					(penaltyWinner == "away" && apiWinner == "AWAY_TEAM")
 				if palHome == resHome && palAway == resAway {
 					// Acertou o placar exato do empate.
 					if penaltyCorrect {
 						return 10.0*mult + 3.0
 					}
-					return 3.0 * mult
+					return 10.0 * mult
 				}
-				// Errou o placar exato mas apostou empate (qualquer placar x-x) —
-				// acertar o resultado vale 3*mult, igual a acertar o vencedor com placar errado.
+				// Errou o placar exato mas apostou empate — acertou o resultado.
+				if penaltyCorrect {
+					return 3.0*mult + 3.0
+				}
 				return 3.0 * mult
 			}
 		}

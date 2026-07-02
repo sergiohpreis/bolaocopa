@@ -28,6 +28,13 @@
 - Tipos globais em `src/types/index.ts`
 - API functions em `src/api/bolao.ts` (ou arquivo específico por domínio)
 
+## Scoring Rules
+
+Qualquer alteração nas regras de pontuação (`backend/internal/service/ranking.go` — função `calcPontos`) **obrigatoriamente** deve:
+
+1. Ser feita com TDD (red → green)
+2. Atualizar `frontend/src/views/ComoFuncionaView.vue` — seção de mata-mata (linhas ~97-110) para refletir as novas regras
+
 ## Feature Announcements
 
 Novas features são anunciadas via **`src/components/WhatsNewModal.vue`**.
